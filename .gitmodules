@@ -1,6 +1,6 @@
-[submodule "dependencies/libtins"]
-	path = dependencies/libtins
-	url = https://github.com/mfontanini/libtins.git
 [submodule "dependencies/jsoncpp"]
 	path = dependencies/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "dependencies/libtins"]
+	path = dependencies/libtins
+	url = https://github.com/mfontanini/libtins.git
