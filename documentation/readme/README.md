@@ -164,9 +164,9 @@ make install # as root
 ```
 
 Note that if ```setcap``` is found when installing, it is used to set the
-```CAP_NET_RAW``` capability to the ```dublin-traceroute``` binary.
+```CAP_NET_RAW``` capability on the ```dublin-traceroute``` binary.
 This allows any regular user to run ```dublin-traceroute``` without root privileges
-but to be still able to use raw sockets, necessary to forget the traceroute packets.
+but to be still able to use raw sockets, necessary to forge the traceroute packets.
 If ```setcap``` is not found, the set-uid bit is set. If you don't want any of these,
 you have to run it as root.
 
