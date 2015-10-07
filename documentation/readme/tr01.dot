@@ -1,0 +1,6 @@
+DiGraph {
+    rankdir=LR;
+    A, F [shape=rectangle];
+    A -> B -> D -> F;
+    A -> C -> E -> F;
+}
