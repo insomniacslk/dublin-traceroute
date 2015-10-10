@@ -82,7 +82,7 @@ due.
 Dublin Traceroute is written in C++11 on top of a beautiful network packet sniffing and
 crafting library, [libtins](https://libtins.github.io).
 Dublin Traceroute also features a Python extension on top of the C++ core if you
-are not fond of C++ or you need to embed it in a Python project.
+prefer.
 
 See the [examples](examples.md) to see Dublin Traceroute at work.
 
