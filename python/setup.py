@@ -1,4 +1,13 @@
+import sys
+
 from distutils.core import setup, Extension
+
+
+if sys.version_info.major >= 3:
+    sources = ['dublintraceroute/py3/_dublintraceroute.cc']
+else:
+    sources = ['dublintraceroute/py2/_dublintraceroute.cc']
+
 
 dublintraceroute = Extension(
     'dublintraceroute._dublintraceroute',
@@ -10,7 +19,7 @@ dublintraceroute = Extension(
         '../dependencies/g3log/src',
         '../dependencies/jsoncpp/dist',
     ],
-    sources=['dublintraceroute/_dublintraceroute.cc'],
+    sources=sources,
     extra_compile_args=[
         '-std=c++11',
         '-ldublintraceroute',

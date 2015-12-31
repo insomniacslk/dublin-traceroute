@@ -1,9 +1,9 @@
+from __future__ import print_function
+
 import json
 import random
 
-import pygraphviz
-
-import _dublintraceroute
+from . import _dublintraceroute
 
 
 class DublinTraceroute(_dublintraceroute.DublinTraceroute):
@@ -26,7 +26,7 @@ class DublinTraceroute(_dublintraceroute.DublinTraceroute):
         Example:
         >>> dub = DublinTraceroute(12345, 33434, "8.8.8.8")
         >>> results = dub.traceroute()
-        >>> print results
+        >>> print(results)
         {u'flows': {u'33434': [{u'is_last': False,
             u'nat_id': 0,
             u'received': {u'icmp': {u'code': 11,
@@ -49,10 +49,10 @@ def print_results(results):
     '''
     # tabulate is imported here so it's not a requirement at module load
     import tabulate
-    headers = ['ttl'] + results['flows'].keys()
+    headers = ['ttl'] + list(results['flows'].keys())
     columns = []
     max_hops = 0
-    for flow_id, hops in results['flows'].iteritems():
+    for flow_id, hops in results['flows'].items():
         column = []
         for hop in hops:
             try:
@@ -72,7 +72,7 @@ def print_results(results):
         columns.append(column)
     columns = [range(1, max_hops + 1)] + columns
     rows = zip(*columns)
-    print tabulate.tabulate(rows, headers=headers)
+    print(tabulate.tabulate(rows, headers=headers))
 
 
 def to_graphviz(traceroute, no_rtt=False):
@@ -89,6 +89,10 @@ def to_graphviz(traceroute, no_rtt=False):
     >>> graph.draw('traceroute.png')
     >>> graph.write('traceroute.dot')
     '''
+    # importing here, so if pygraphviz is not installed it will not fail at
+    # import time
+    import pygraphviz
+
     graph = pygraphviz.AGraph(strict=False, directed=True)
     graph.node_attr['shape'] = 'ellipse'
     graph.graph_attr['rankdir'] = 'BT'

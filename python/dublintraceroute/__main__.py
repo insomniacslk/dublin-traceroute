@@ -1,4 +1,9 @@
+from __future__ import print_function
+
+import json
+
 from dublintraceroute import DublinTraceroute, print_results, to_graphviz
+
 
 def parse_args():
     import argparse

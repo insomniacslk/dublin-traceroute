@@ -13,12 +13,12 @@ static PyObject* DublinTraceroute_init(PyObject *self, PyObject *args,
 	char *target;
 	unsigned short npaths = DublinTraceroute::default_npaths;
 	unsigned short max_ttl = DublinTraceroute::default_max_ttl;
-	static const char *kwlist[] = { "self", "sport", "dport", "target",
+	static const char *kwlist[] = { "self", "target", "sport", "dport",
 		"npaths", "max_ttl", NULL };
 	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|HHHH",
 				(char **)&kwlist, &self, &target, &sport,
 				&dport, &npaths, &max_ttl)) {
-		PyErr_SetString(PyErr_Occurred(), "Invalid arguments");
+		PyErr_BadArgument();
 		return NULL;
 	}
 
