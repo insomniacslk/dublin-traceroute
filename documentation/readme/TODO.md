@@ -27,3 +27,4 @@
 * Use both src and dst ports for tracerouting
 * Add path MTU discovery and measure fragmentation-induced latency
 * Use [pyasn](https://github.com/hadiasghari/pyasn) to look up AS by IP
+* Integrate the ASN graph with a world map (e.g. openstreetmap or google maps)
