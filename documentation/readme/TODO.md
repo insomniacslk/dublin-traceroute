@@ -29,3 +29,4 @@
 * Use [pyasn](https://github.com/hadiasghari/pyasn) to look up AS by IP
 * Integrate the ASN graph with a world map (e.g. openstreetmap or google maps)
 * Add --webserver to the python CLI to expose a SimpleHTTPServer that serves a PNG with the traceroute diagram
+* heat map/flame graph of the network latencies over time (links history)
