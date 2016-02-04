@@ -72,7 +72,7 @@ submodules:
 $(TINS_AR): $(TINS_BASE_DIR)
 	(	\
 		cd $(TINS_BASE_DIR)	&& \
-		git checkout tags/v3.2	&& \
+		git checkout tags/v3.3	&& \
 		$(RM) -r $(TINS_BUILD_DIR) 	&& \
 		mkdir $(TINS_BUILD_DIR)	&& \
 		cd $(TINS_BUILD_DIR)	&& \
@@ -83,7 +83,7 @@ $(TINS_AR): $(TINS_BASE_DIR)
 $(TINS_SO): $(TINS_BASE_DIR)
 	(	\
 		cd $(TINS_BASE_DIR)	&& \
-		git checkout tags/v3.2	&& \
+		git checkout tags/v3.3	&& \
 		$(RM) -r $(TINS_BUILD_DIR) 	&& \
 		mkdir $(TINS_BUILD_DIR)	&& \
 		cd $(TINS_BUILD_DIR)	&& \

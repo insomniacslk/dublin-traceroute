@@ -99,7 +99,7 @@ std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
 				UDP(dport, srcport()) /
 				RawPDU((char *)payload);
 			packet.ttl(ttl);
-			packet.frag_off(0x4000); // set DF bit
+			packet.flags(IP::DONT_FRAGMENT); // set DF bit
 
 			// serialize the packet so that we can extract src IP
 			// and checksum
