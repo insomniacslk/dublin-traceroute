@@ -23,7 +23,7 @@
 * SNIFFER_TIMEOUT must become a constructor parameter
 * Handle open UDP dst port responses
 * Send 3 packets per hop
-* Convert the traceroute internal representation into a graph
+* Convert the traceroute internal representation into a graph (use https://graph-tool.skewed.de/ maybe?)
 * Use both src and dst ports for tracerouting
 * Add path MTU discovery and measure fragmentation-induced latency
 * Use [pyasn](https://github.com/hadiasghari/pyasn) to look up AS by IP
