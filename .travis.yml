@@ -6,10 +6,7 @@ os:
   - linux
   - osx
 
-matrix:
-  include:
-    - os: linux
-      sudo: required
+sudo: required
 
 compiler:
   - clang
