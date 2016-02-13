@@ -24,14 +24,3 @@ matrix:
         env: COMPILER=clang++-3.4
     - os: osx
       compiler: clang
-
-before_install:
-  - ./.travis/before_install.sh
-
-install:
-  - ./.travis/install.sh
-
-addons:
-  apt:
-    packages:
-      - libpcap-dev
