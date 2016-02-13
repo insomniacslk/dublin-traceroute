@@ -20,12 +20,12 @@ before_install:
 
 install:
   # g++4.8.1
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi ; fi
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi ; di
 
   # clang 3.4
-  - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
-  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi ; fi
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi ; fi
 
 addons:
   apt:
