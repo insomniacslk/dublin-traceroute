@@ -10,6 +10,7 @@ matrix:
       compiler: gcc
       addons:
         apt:
+          sources: ['ubuntu-toolchain-r-test']
           packages:
             - libpcap-dev
         env: COMPILER=g++-4.8
@@ -17,6 +18,7 @@ matrix:
       compiler: clang
       addons:
         apt:
+          sources: ['ubuntu-toolchain-r-test']
           packages:
             - libpcap-dev
         env: COMPILER=clang++-3.4
