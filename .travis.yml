@@ -1,5 +1,13 @@
 language: cpp
 script: make
+os:
+  - linux
+  - osx
 compiler:
   - clang
   - gcc
+
+addons:
+  apt:
+    packages:
+      - libpcap-dev
