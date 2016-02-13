@@ -7,7 +7,6 @@ sudo: required
 matrix:
   include:
     - os: linux
-      compiler: gcc
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
@@ -16,7 +15,6 @@ matrix:
             - libpcap-dev
         env: CXX=g++-4.8
     - os: linux
-      compiler: clang
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
