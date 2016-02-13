@@ -4,23 +4,20 @@ script: make
 
 sudo: required
 
-matrix:
-  include:
-    - os: linux
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages:
-            - g++-4.8
-            - libpcap-dev
-        env: CXX=g++-4.8
-    - os: linux
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
-          packages:
-            - clang-3.4
-            - libpcap-dev
-        env: CXX=clang++-3.4
-    - os: osx
-      compiler: clang
+os:
+  - linux
+  - osx
+
+compiler:
+  - clang
+  - gcc
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.6
+    packages:
+      - g++-4.8
+      - llvm-3.6-dev
+      - clang-3.6
