@@ -2,15 +2,26 @@ language: cpp
 
 script: make
 
-os:
-  - linux
-  - osx
-
 sudo: required
 
-compiler:
-  - clang
-  - gcc
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          packages:
+            - libpcap-dev
+        env: COMPILER=g++-4.8
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          packages:
+            - libpcap-dev
+        env: COMPILER=clang++-3.4
+    - os: osx
+      compiler: clang
 
 before_install:
   - ./.travis/before_install.sh

@@ -10,11 +10,3 @@ then
         sudo apt-get install --allow-unauthenticated -qq clang-3.4
     fi
 fi
-
-if [ "$CXX" = "g++" ]
-then
-    export CXX="g++-4.8"
-elif [ "$CXX" = "clang" ]
-then
-    export CXX="clang++-3.4"
-fi
