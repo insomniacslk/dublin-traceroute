@@ -21,3 +21,4 @@ addons:
       - g++-4.8
       - llvm-3.6-dev
       - clang-3.6
+      - libpcap-dev
