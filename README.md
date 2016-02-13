@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/insomniacslk/dublin-traceroute.svg?branch=master)](https://travis-ci.org/insomniacslk/dublin-traceroute)
+
 Dublin Traceroute is a NAT-aware multipath traceroute tool. You should really
 read more at https://dublin-traceroute.net .
 
