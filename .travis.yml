@@ -5,6 +5,12 @@ script: make
 os:
   - linux
   - osx
+
+matrix:
+  include:
+    - os: linux
+      sudo: required
+
 compiler:
   - clang
   - gcc
