@@ -25,3 +25,4 @@ addons:
 
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.6"; fi
