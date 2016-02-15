@@ -26,3 +26,31 @@ addons:
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.6"; fi
+
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    secure: "HRQ2t4oxAzmhdC8EH63WnQR9pMW6++SU72s6ila+XrCY1lZEaCVi8gZfLWbNkvamH9h1g+KLRFIA0w7DYBDIPYHHMpth847ypMdRtOyBk7815rw9Ew2HMZA7octvKTKvrHXboH71TJyuC/Zb62jWajcasilsVAb+AmWc9IvichhbQlAarwUg8d62Mm4dBWvnXCivl0xDrPoXPSbmrBEF3Z5Ebd7Rg5nCiLPLwKP3uc5TEUgt8CRdHhRrjKZ82VoaHdrGCm3gKp6zWBgYTk6XzG58yGararHiiECTTkKG0spXGKjhHmNU+IRERekNaKHkn0H+WKutU5uT0zlbou0uCe941OPi0dnAC3IqQPagVwKXN4fZSG2Wjjq64+1RPHTnYJxMO1OObiRPY6vKRTsChcHR2ZWQ1yW4NnRtyFuXwvb2IhrZJ3yo+GvSh+pw7vC979iRLWyV2FGLIa1PrxDxeePgbkhuVw5dbnP5hiHRla30hqf1hOQDdnHwwhsOnCTy8DEar1t9GWXsq9CqY0hV4uIf7zFZssXoch1GROIt/Lmi7/7JTtR3kePymdWT/57rTvkPeFkHHSvUNPzyz6WriF7O5AvOqiDtBy2YV29dSAi5MLQ5nj/+TsZyN9QX/Zn0moWvGct8Jf1Phd+N7Fx6MLB2StEqNAlGLbRWM+ERLIU="
+
+addons:
+  coverity_scan:
+
+    # GitHub project metadata
+    project:
+      name: insomniacslk/dublin-traceroute
+      version: 1.0
+      description: Dublin Traceroute is a NAT-aware multipath tracerouting tool
+
+    # Where email notification of build analysis results will be sent
+    notification_email: insomniacslk@users.noreply.github.com
+
+    # Commands to prepare for build_command
+    # build_command_prepend: ./configure
+
+    # The command that will be added as an argument to "cov-build" to compile your project for analysis,
+    build_command: make
+
+    # Pattern to match selecting branches that will run analysis. We recommend leaving this set to 'coverity_scan'.
+    # Take care in resource usage, and consider the build frequency allowances per
+    #   https://scan.coverity.com/faq#frequency
+    branch_pattern: coverity_scan
