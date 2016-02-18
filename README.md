@@ -2,7 +2,7 @@
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/7935/badge.svg)](https://scan.coverity.com/projects/insomniacslk-dublin-traceroute)
 
 Dublin Traceroute is a NAT-aware multipath traceroute tool. **You should really
-read more at https://dublin-traceroute.net ** .
+read more at https://dublin-traceroute.net** .
 
 Feedback is extremely welcome! Find my contacts on https://insomniac.slackware.it .
 
