@@ -1,4 +1,3 @@
-
 /**
  * \file   main.cc
  * \Author Andrea Barberio <insomniac@slackware.it>
