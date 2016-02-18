@@ -1,3 +1,12 @@
+/**
+ * \file   icmp_messages.h
+ * \Author Andrea Barberio <insomniac@slackware.it>
+ * \date   October 2015
+ * \brief  ICMP messages definitions
+ *
+ * This file contains the ICMP messages definitions
+ */
+ 
 #ifndef _ICMP_MESSAGES_H
 #define _ICMP_MESSAGES_H
 
