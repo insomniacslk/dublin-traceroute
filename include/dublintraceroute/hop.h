@@ -1,4 +1,19 @@
-#ifndef _HOP_H
+/**
+ * \file   hop.h
+ * \Author Andrea Barberio <insomniac@slackware.it>
+ * \date   October 2015
+ * \brief  Definition of the Hop class
+ *
+ * This file contains the definition of the Hop class, which represent every
+ * single hop in a traceroute. A Hop includes the sent packet, the matching
+ * received packet (if any), NAT information and last-hop information.
+ *
+ * This module currently offers the set-up of the logging facilities.
+ *
+ * \sa hop.cc
+ */
+ 
+ #ifndef _HOP_H
 #define _HOP_H
 
 #include <future>
