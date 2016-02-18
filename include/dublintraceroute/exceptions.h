@@ -1,4 +1,14 @@
-#ifndef _EXCEPTIONS_H
+/**
+ * \file   exceptions.h
+ * \author Andrea Barberio <insomniac@slackware.it>
+ * \copyright 2-clause BSD
+ * \date   October 2015
+ * \brief  Common exceptions
+ *
+ * This module contains the common exceptions definitions
+ */
+ 
+ #ifndef _EXCEPTIONS_H
 #define _EXCEPTIONS_H
 
 #include <stdexcept>
