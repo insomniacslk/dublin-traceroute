@@ -1,3 +1,14 @@
+
+/**
+ * \file   main.cc
+ * \Author Andrea Barberio <insomniac@slackware.it>
+ * \date   October 2015
+ * \brief  entry point for dublin-traceroute
+ *
+ * This file contains the main routine for calling the standalone dublin-traceroute
+ * executable.
+ */
+
 #include <iostream>
 #include <fstream>
 
