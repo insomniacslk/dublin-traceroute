@@ -7,8 +7,9 @@
  *
  * This file contains the common utilities for dublin-traceroute.
  *
- * This module currently offers the set-up of the logging facilities.
- *
+ * This module currently offers the set-up of the logging facilities and IP ID
+ * matching algorithm switch.
+ * 
  * \sa common.h
  */
 
