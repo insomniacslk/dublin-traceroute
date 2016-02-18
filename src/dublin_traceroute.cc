@@ -6,7 +6,7 @@
  * \brief  Main class for the NAT-aware multipath traceroute
  *
  * This module contains the implementation of the NAT-aware multipath
- *  traceroute known as dublin-traceroute.
+ * traceroute known as dublin-traceroute.
  *
  * \sa dublin_traceroute.h
  */
