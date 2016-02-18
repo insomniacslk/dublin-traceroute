@@ -1,3 +1,16 @@
+/**
+ * \file   dublin_traceroute.h
+ * \author Andrea Barberio <insomniac@slackware.it>
+ * \copyright 2-clause BSD
+ * \date   October 2015
+ * \brief  Main class for the NAT-aware multipath traceroute
+ *
+ * This module contains the implementation of the NAT-aware multipath
+ * traceroute known as dublin-traceroute.
+ *
+ * \sa dublin_traceroute.cc
+ */
+
 #ifndef _Dublin_TRACEROUTE_H
 #define _Dublin_TRACEROUTE_H
 
