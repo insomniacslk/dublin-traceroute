@@ -16,7 +16,6 @@
 * use CMake
 * put everything under a namespace
 * implement command line parser in main.cc
-* Add author and copyright to every source file
 * Add an uninstall target in the Makefile for the python extension
 * Fix the memory leak where TracerouteResults is not freed
 * IP_ID_MATCHING must become a constructor parameter
