@@ -1,3 +1,18 @@
+/**
+ * \file   common.h
+ * \author Andrea Barberio <insomniac@slackware.it>
+ * \copyright 2-clause BSD
+ * \date   October 2015
+ * \brief  Common utilities for dublin-traceroute
+ *
+ * This file contains the common utilities for dublin-traceroute.
+ *
+ * This module currently offers the set-up of the logging facilities and IP ID
+ * matching algorithm switch.
+ *
+ * \sa common.cc
+ */
+
 #ifndef _COMMON_H
 #define _COMMON_H
 
