@@ -133,9 +133,10 @@ git clone https://github.com/insomniacslk/dublin-traceroute.git
 source code, but in short you need:
 
   * cmake
-  * gcc >= 4.6 or clang >= 3.3
+  * gcc >= 4.7 or clang >= 3.3
   * libpcap-dev
-  * libtins >= 3 (or use the one provided by Dublin Traceroute)
+  * libtins >= 3.3
+  * jsoncpp
   * python-dev (if you want to build the Python extension)
   * python-pygraphviz (to plot graphs from the Python extension)
   * python-tabulate (to print the traceroute output to the console)
@@ -144,6 +145,9 @@ source code, but in short you need:
 
 ```bash
 cd dublin-traceroute
+mkdir build
+cd build
+cmake ..
 make
 ```
 
