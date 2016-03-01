@@ -65,6 +65,6 @@ main(int argc, char **argv) {
 	jsonfile.close();
 	std::cout << "Saved JSON file to trace.json ." << std::endl;
 
-	std::cout << "You can convert it to DOT by running scripts/to_graphviz.py trace.json" << std::endl;
+	std::cout << "You can convert it to DOT by running python -m dublintraceroute --plot trace.json" << std::endl;
 }
 
