@@ -31,5 +31,3 @@ install(TARGETS dublin-traceroute dublintraceroute
     LIBRARY DESTINATION lib
     )
 install(DIRECTORY include/dublintraceroute DESTINATION include)
-
-add_subdirectory(python)

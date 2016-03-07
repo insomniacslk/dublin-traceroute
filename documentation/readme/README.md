@@ -82,7 +82,8 @@ due.
 Dublin Traceroute is written in C++11 on top of a beautiful network packet sniffing and
 crafting library, [libtins](https://libtins.github.io).
 Dublin Traceroute also features a Python extension on top of the C++ core if you
-prefer.
+prefer. The bindings now live in a separate repository, see
+[python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute) .
 
 See the [examples](examples.md) to see Dublin Traceroute at work.
 
@@ -137,9 +138,6 @@ source code, but in short you need:
   * libpcap-dev
   * libtins >= 3.3
   * jsoncpp
-  * python-dev (if you want to build the Python extension)
-  * python-pygraphviz (to plot graphs from the Python extension)
-  * python-tabulate (to print the traceroute output to the console)
 
 * Build it
 
