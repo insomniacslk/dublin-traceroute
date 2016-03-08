@@ -21,7 +21,7 @@
 void
 usage(const char *name) {
 	std::cout << "Usage: " << name << " target" << std::endl;
-	exit(EXIT_FAILURE);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -66,5 +66,7 @@ main(int argc, char **argv) {
 	std::cout << "Saved JSON file to trace.json ." << std::endl;
 
 	std::cout << "You can convert it to DOT by running python -m dublintraceroute --plot trace.json" << std::endl;
+
+	exit(EXIT_SUCCESS);
 }
 
