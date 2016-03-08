@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
-project (dublin-traceroute)
+project (dublin-traceroute
+    VERSION 0.2)
 
 set (dublin-traceroute_VERSION_MAJOR_1)
 set (dublin-traceroute_VERSION_MINOR_0)
