@@ -1,8 +1,11 @@
 [![Build Status](https://travis-ci.org/insomniacslk/dublin-traceroute.svg?branch=master)](https://travis-ci.org/insomniacslk/dublin-traceroute)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/7935/badge.svg)](https://scan.coverity.com/projects/insomniacslk-dublin-traceroute)
 
-Dublin Traceroute is a NAT-aware multipath traceroute tool. **You should really
-read more at https://dublin-traceroute.net** .
+Dublin Traceroute is a NAT-aware multipath traceroute tool.
+
+And this page is just informational. **You should really read more at https://dublin-traceroute.net** .
+
+If you are looking for the Python bindings, check out [python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute)
 
 Feedback is extremely welcome! Find my contacts on https://insomniac.slackware.it .
 
