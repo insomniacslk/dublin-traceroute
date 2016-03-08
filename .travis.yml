@@ -1,8 +1,19 @@
 language: cpp
 
-script: make
+before_script:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install_dependencies_linux.sh ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then .travis/install_dependencies_osx.sh ; fi
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script: make VERBOSE=1
+
+after_script:
+  - ./dublin-traceroute
 
 sudo: required
+dist: trusty
 
 os:
   - linux
@@ -11,6 +22,11 @@ os:
 compiler:
   - clang
   - gcc
+
+matrix:
+  exclude:
+    - os: osx
+      compiler: gcc
 
 addons:
   apt:
@@ -22,6 +38,8 @@ addons:
       - llvm-3.6-dev
       - clang-3.6
       - libpcap-dev
+      - jsoncpp
+      - libtins
   coverity_scan:
 
     # GitHub project metadata
@@ -37,7 +55,11 @@ addons:
     # build_command_prepend: ./configure
 
     # The command that will be added as an argument to "cov-build" to compile your project for analysis,
-    build_command: make
+    build_command:
+      - mkdir build
+      - cd build
+      - cmake ..
+      - make
 
     # Pattern to match selecting branches that will run analysis. We recommend leaving this set to 'coverity_scan'.
     # Take care in resource usage, and consider the build frequency allowances per
@@ -47,6 +69,7 @@ addons:
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.6"; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
 
 env:
   global:
