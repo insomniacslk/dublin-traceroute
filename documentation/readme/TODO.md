@@ -13,7 +13,6 @@
 * support MPLS, https://tools.ietf.org/html/rfc4950
 * break on destination unreachable
 * improve documentation
-* use CMake
 * put everything under a namespace
 * implement command line parser in main.cc
 * Add an uninstall target in the Makefile for the python extension
