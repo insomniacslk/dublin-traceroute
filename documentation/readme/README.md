@@ -124,20 +124,20 @@ Dublin Traceroute aims to be:
 
 ## Installation instructions
 
-* Check out the project on github
+Independently from the OS, to build dublin-traceroute you need:
+  * cmake
+  * gcc >= 4.7 or clang >= 3.3
+
+### On Linux
+
+* Install [libtins](https://github.com/mfontanini/libtins) 3.4+ from source
+* Install [jsoncpp](https://github.com/open-source-parsers/jsoncpp) from source
+* Install libpcap-dev
+* Check out dublin-traceroute on github
 
 ```shell
 git clone https://github.com/insomniacslk/dublin-traceroute.git
 ```
-
-* Ensure you have all the prerequisites, see the file ```DEPENDENCIES``` in the
-source code, but in short you need:
-
-  * cmake
-  * gcc >= 4.7 or clang >= 3.3
-  * libpcap-dev
-  * libtins >= 3.3
-  * jsoncpp
 
 * Build it
 
@@ -148,6 +148,14 @@ cd build
 cmake ..
 make
 ```
+
+### On OS X
+
+```bash
+brew install dublin-traceroute
+```
+
+### Other hints
 
 It will use your default compiler. Alternatively, if you prefer, you can force a
 different compiler. For GCC:
