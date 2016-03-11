@@ -128,7 +128,7 @@ Independently from the OS, to build dublin-traceroute you need:
   * cmake
   * gcc >= 4.7 or clang >= 3.3
 
-### On Linux
+### Building on Linux
 
 * Install [libtins](https://github.com/mfontanini/libtins) 3.4+ from source
 * Install [jsoncpp](https://github.com/open-source-parsers/jsoncpp) from source
@@ -149,26 +149,13 @@ cmake ..
 make
 ```
 
-### On OS X
+### Building on OS X
 
 ```bash
 brew install dublin-traceroute
 ```
 
-### Other hints
-
-It will use your default compiler. Alternatively, if you prefer, you can force a
-different compiler. For GCC:
-
-```bash
-CXX=g++ make
-```
-
-or for clang:
-
-```bash
-CXX=clang++ make
-```
+### Installing
 
 * Install it in the system paths (by default under
 /usr/local/{bin,lib,include}). This will also install the provided __libtins__
@@ -184,6 +171,21 @@ This allows any regular user to run ```dublin-traceroute``` without root privile
 but to be still able to use raw sockets, necessary to forge the traceroute packets.
 If ```setcap``` is not found, the set-uid bit is set. If you don't want any of these,
 you have to run it as root.
+
+### Other hints
+
+It will use your default compiler. Alternatively, if you prefer, you can force a
+different compiler. For GCC:
+
+```bash
+CXX=g++ make
+```
+
+or for clang:
+
+```bash
+CXX=clang++ make
+```
 
 ## What is missing?
 
