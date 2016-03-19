@@ -26,7 +26,7 @@ endif (${libtins_FOUND})
 pkg_search_module(JSONCPP REQUIRED jsoncpp)
 
 add_executable(dublin-traceroute src/main.cc)
-target_link_libraries (dublin-traceroute ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (dublintraceroute ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(dublin-traceroute dublintraceroute)
 target_link_libraries(dublintraceroute tins)
 
