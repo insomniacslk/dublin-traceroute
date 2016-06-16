@@ -15,7 +15,7 @@ add_library(dublintraceroute SHARED
 
 find_package(PkgConfig)
 find_package(Threads REQUIRED)
-find_package(libtins)
+find_package(libtins 3.4)
 if (${libtins_FOUND})
     MESSAGE(STATUS "libtins found via CMake")
 else (${libtins_FOUND})
