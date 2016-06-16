@@ -20,7 +20,10 @@
 
 void
 usage(const char *name) {
-	std::cout << "Usage: " << name << " target" << std::endl;
+	std::cout << "Usage: " << name << " target" << std::endl
+		<< std::endl
+		<< "See documentation at https://dublin-traceroute.net" << std::endl
+		<< "Please report bugs at https://github.com/insomniacslk/dublin-traceroute" << std::endl;
 	exit(EXIT_SUCCESS);
 }
 
