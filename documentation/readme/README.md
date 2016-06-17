@@ -219,6 +219,12 @@ the city where I live and work, **Dublin**, hence the name.
 
 Yes.
 
+#### How do I ask a question or contribute?
+
+Go to the [Dublin Traceroute mailing list](https://groups.google.com/forum/#!forum/dublin-traceroute) and just ask :)
+
+Otherwise you can open an issue on GitHub, at https://github.com/insomniacslk/dublin-traceroute/issues , or contact me directly (see below).
+
 #### What is the license of Dublin Traceroute?
 
 The [2-clause BSD](http://opensource.org/licenses/BSD-2-Clause)
