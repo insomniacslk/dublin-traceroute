@@ -223,7 +223,7 @@ Yes.
 
 Go to the [Dublin Traceroute mailing list](https://groups.google.com/forum/#!forum/dublin-traceroute) and just ask :)
 
-Otherwise you can open an issue on GitHub, at https://github.com/insomniacslk/dublin-traceroute/issues , or contact me directly (see below).
+Otherwise you can [open an issue](https://github.com/insomniacslk/dublin-traceroute/issues) or [make a pull request](https://github.com/insomniacslk/dublin-traceroute/pulls) on the GitHub page of dublin-traceroute, or contact me directly (see below).
 
 #### What is the license of Dublin Traceroute?
 
