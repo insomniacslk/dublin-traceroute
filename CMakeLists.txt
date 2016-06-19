@@ -4,6 +4,11 @@ project (dublin-traceroute)
 set (dublin-traceroute_VERSION_MAJOR_0)
 set (dublin-traceroute_VERSION_MINOR_2)
 
+# ensure that /usr/local is used to find dependencies. This is especially
+# necessary for brew on OSX and for libraries installed manually under
+# /usr/local
+list(APPEND CMAKE_PREFIX_PATH /usr/local)
+
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
 add_library(dublintraceroute SHARED
@@ -12,6 +17,12 @@ add_library(dublintraceroute SHARED
     src/hop.cc
     src/traceroute_results.cc
 )
+
+# Set the shared library version
+set_target_properties(dublintraceroute
+    PROPERTIES
+      SOVERSION 0.0.0
+    )
 
 find_package(PkgConfig)
 find_package(Threads REQUIRED)
@@ -26,7 +37,7 @@ endif (${libtins_FOUND})
 pkg_search_module(JSONCPP REQUIRED jsoncpp)
 
 add_executable(dublin-traceroute src/main.cc)
-target_link_libraries (dublintraceroute ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(dublintraceroute ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(dublin-traceroute dublintraceroute)
 target_link_libraries(dublintraceroute tins)
 
