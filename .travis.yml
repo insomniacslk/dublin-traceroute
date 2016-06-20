@@ -41,9 +41,6 @@ compiler:
   - gcc
 
 matrix:
-  include:
-    - os: linux
-      env: LLVM_VERSION=3.8.0  # LLVM workaround, see https://github.com/travis-ci/travis-ci/issues/6120
   exclude:
     - os: osx
       compiler: gcc
@@ -51,13 +48,11 @@ matrix:
 addons:
   apt:
     sources:
-      - llvm-toolchain-precise-3.6
+      - ubuntu-toolchain-r-test
     packages:
       - g++-4.8
       - clang-3.6
       - libpcap-dev
-      - jsoncpp
-      - libtins
   coverity_scan:
 
     # GitHub project metadata
