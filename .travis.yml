@@ -30,7 +30,6 @@ dist: trusty
 
 os:
   - linux
-    env: LLVM_VERSION=3.8.0  # LLVM workaround, see https://github.com/travis-ci/travis-ci/issues/6120
   - osx
 
 cache:
@@ -42,6 +41,9 @@ compiler:
   - gcc
 
 matrix:
+  include:
+    - os: linux
+      env: LLVM_VERSION=3.8.0  # LLVM workaround, see https://github.com/travis-ci/travis-ci/issues/6120
   exclude:
     - os: osx
       compiler: gcc
@@ -73,9 +75,9 @@ addons:
     # The command that will be added as an argument to "cov-build" to compile your project for analysis,
     build_command:
       - mkdir build
-      - cd build
-      - cmake ..
-      - make
+        cd build
+        cmake ..
+        make
 
     # Pattern to match selecting branches that will run analysis. We recommend leaving this set to 'coverity_scan'.
     # Take care in resource usage, and consider the build frequency allowances per
