@@ -124,11 +124,26 @@ Dublin Traceroute aims to be:
 
 ## Installation instructions
 
-Independently from the OS, to build dublin-traceroute you need:
+### From packages
+
+Dublin Traceroute is packaged in Debian and Ubuntu, yet still in the unstable repos. To install it (as root):
+
+on Debian:
+* enable the `unstable` repository, with something like `echo "deb http://httpredir.debian.org/debian unstable main" > /etc/apt/sources.list.d/debian-unstable.list`
+* `apt-get install dublin-traceroute`
+
+on Ubuntu:
+
+* add the `proposed` repository, following the instructions at https://wiki.ubuntu.com/Testing/EnableProposed
+* `apt-get install dublin-traceroute`
+
+### From source
+
+Independently of the OS, to build dublin-traceroute you need:
   * cmake
   * gcc >= 4.7 or clang >= 3.3
 
-### Building on Linux
+#### Building on Linux
 
 * Install [libtins](https://github.com/mfontanini/libtins) 3.4+ from source
 * Install [jsoncpp](https://github.com/open-source-parsers/jsoncpp) from source
@@ -149,15 +164,15 @@ cmake ..
 make
 ```
 
-### Building on OS X
+#### Building on OS X
 
 ```bash
 brew install https://raw.githubusercontent.com/insomniacslk/homebrew/master/Library/Formula/dublin-traceroute.rb
 ```
 
-This will be as simple as `brew install dublin-tracerout` after https://github.com/Homebrew/homebrew/pull/50000 will be merged.
+This will be as simple as `brew install dublin-traceroute` after https://github.com/Homebrew/homebrew/pull/50000 will be merged.
 
-### Installing
+#### Installing
 
 * Install it in the system paths (by default under
 /usr/local/{bin,lib,include}). This will also install the provided __libtins__
