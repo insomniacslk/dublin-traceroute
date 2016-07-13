@@ -168,7 +168,7 @@ make
 #### Building on OS X
 
 ```bash
-brew install https://raw.githubusercontent.com/insomniacslk/homebrew/master/Library/Formula/dublin-traceroute.rb
+brew install https://raw.githubusercontent.com/insomniacslk/dublin-traceroute/master/homebrew/dublin-traceroute.rb
 ```
 
 This will be as simple as `brew install dublin-traceroute` after https://github.com/Homebrew/homebrew/pull/50000 will be merged.
