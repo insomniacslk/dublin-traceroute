@@ -20,6 +20,7 @@
 * IP_ID_MATCHING must become a constructor parameter
 * SNIFFER_TIMEOUT must become a constructor parameter
 * Handle open UDP dst port responses
+* Explore the use of eBPF as a backend
 * Send 3 packets per hop
 * Convert the traceroute internal representation into a graph (use https://graph-tool.skewed.de/ maybe?)
 * Use both src and dst ports for tracerouting
