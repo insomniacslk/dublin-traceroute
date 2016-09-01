@@ -133,6 +133,20 @@ void TracerouteResults::show(std::ostream &stream) {
 					stream << " ICMP "
 						<< "(type=" << icmp.type() << ", code=" << static_cast<int>(icmp.code()) << ") '"
 						<< icmpm.get(icmp.type(), icmp.code()) << "'";
+					if (icmp.has_extensions()) {
+						stream << ", Extensions(";
+						for (auto &extension : icmp.extensions().extensions()) {
+							stream
+								<< "class=" << static_cast<int>(extension.extension_class())
+								<< ", type=" << static_cast<int>(extension.extension_type())
+								<< ", payload_size=" << static_cast<int>(extension.payload().size())
+								<< ", payload=\"";
+							for (auto &byte : extension.payload())
+								stream << "\\x" << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(byte);
+							stream << std::dec;
+						}
+						stream << "\")";
+					}
 				} catch (pdu_not_found) {
 				}
 
