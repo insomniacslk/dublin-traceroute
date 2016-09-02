@@ -6,9 +6,13 @@
  *
  * This file contains the ICMP messages definitions
  */
- 
+
 #ifndef _ICMP_MESSAGES_H
 #define _ICMP_MESSAGES_H
+
+#define ICMP_EXTENSION_MPLS_CLASS	1
+#define ICMP_EXTENSION_MPLS_TYPE	1
+
 
 #include <sstream>
 #include <tuple>
