@@ -164,7 +164,7 @@ Json::Value Hop::to_json() {
 					// if MPLS was encountered, also add parsed extension
 					if (ext_class == ICMP_EXTENSION_MPLS_CLASS && ext_type == ICMP_EXTENSION_MPLS_TYPE) {
 						// FIXME here I am assuming that size is always a multiple of 4
-						for (unsigned int idx = 0; idx < payload.size(); idx+=4) {
+						for (unsigned int idx = 0; idx < payload.size(); idx += 4) {
 							unsigned int label = (payload[idx] << 12) + (payload[idx + 1] << 4) + (payload[idx + 2] >> 4);
 							unsigned int experimental = (payload[idx + 2] & 0x0f) >> 1;
 							unsigned int bottom_of_stack = payload[idx + 2] & 0x01;

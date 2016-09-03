@@ -139,22 +139,22 @@ void TracerouteResults::show(std::ostream &stream) {
 							unsigned int ext_type = static_cast<unsigned int>(extension.extension_type());
 							auto &payload = extension.payload();
 							if (ext_class == ICMP_EXTENSION_MPLS_CLASS && ext_type == ICMP_EXTENSION_MPLS_TYPE) {
-								unsigned int label = (payload[0] << 12) + (payload[1] << 4) + (payload[2] >> 4);
-								unsigned int experimental = (payload[2] & 0x0f) >> 1;
-								unsigned int bottom_of_stack = payload[2] & 0x01;
-								unsigned int ttl = payload[3];
-								stream << ", MPLS(label=" << label << ", experimental=" << experimental << ", bottom_of_stack=" << bottom_of_stack << ", ttl=" << ttl << ")";
+								// expecting size to be a multiple of 4 in valid MPLS label stacks
+								unsigned int num_labels = (extension.size() - 4) / 4;
+								for (unsigned int idx = 0; idx < payload.size() ; idx += 4) {
+									unsigned int label = (payload[idx + 0] << 12) + (payload[idx + 1] << 4) + (payload[idx + 2] >> 4);
+									unsigned int experimental = (payload[idx + 2] & 0x0f) >> 1;
+									unsigned int bottom_of_stack = payload[idx + 2] & 0x01;
+									unsigned int ttl = payload[idx + 3];
+									stream << ", MPLS(label=" << label << ", experimental=" << experimental << ", bottom_of_stack=" << bottom_of_stack << ", ttl=" << ttl << ")";
+								}
 							} else {
 								stream
 									<< ", Extension("
 									<< "class=" << ext_class
 									<< ", type=" << ext_type
 									<< ", payload_size=" << payload.size()
-									<< ", payload=\"";
-								for (auto &byte : payload)
-									stream << "\\x" << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(byte);
-								stream << std::dec;
-								stream << ")";
+									<< ")";
 							}
 						}
 					}
