@@ -155,10 +155,16 @@ Json::Value Hop::to_json() {
 					unsigned int ext_class = static_cast<unsigned int>(extension.extension_class());
 					unsigned int ext_type = static_cast<unsigned int>(extension.extension_type());
 					auto &payload = extension.payload();
+					// hex-encoding every byte so the JSON file doesn't contain binary sequences
+					// I could have used base64 or other more efficient encoding, but this is simple and requires no deps
+					std::stringstream payload_hex;
+					for (auto &ch : payload) {
+						payload_hex << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(ch);
+					}
 					ext_node["size"] = size;  // 16 bits
 					ext_node["class"] = ext_class;  // 8 bits
 					ext_node["type"] = ext_type;  // 8 bits
-					ext_node["payload"] = std::string(payload.begin(), payload.end()); // size - 4 bytes
+					ext_node["payload"] = payload_hex.str();
 					root["received"]["icmp"]["extensions"].append(ext_node);
 
 					// if MPLS was encountered, also add parsed extension
