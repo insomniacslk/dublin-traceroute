@@ -146,6 +146,39 @@ Json::Value Hop::to_json() {
 			root["received"]["icmp"]["type"] = static_cast<int>(icmp.code());
 			root["received"]["icmp"]["code"] = static_cast<int>(icmp.type());
 			root["received"]["icmp"]["description"] = icmpm.get(icmp.type(), icmp.code());
+			root["received"]["icmp"]["extensions"] = Json::Value(Json::arrayValue);
+			root["received"]["icmp"]["mpls_labels"] = Json::Value(Json::arrayValue);
+			if (icmp.has_extensions()) {
+				for (auto &extension : icmp.extensions().extensions()) {
+					Json::Value ext_node = Json::Value();
+					unsigned int size = static_cast<unsigned int>(extension.size());
+					unsigned int ext_class = static_cast<unsigned int>(extension.extension_class());
+					unsigned int ext_type = static_cast<unsigned int>(extension.extension_type());
+					auto &payload = extension.payload();
+					ext_node["size"] = size;  // 16 bits
+					ext_node["class"] = ext_class;  // 8 bits
+					ext_node["type"] = ext_type;  // 8 bits
+					ext_node["payload"] = std::string(payload.begin(), payload.end()); // size - 4 bytes
+					root["received"]["icmp"]["extensions"].append(ext_node);
+
+					// if MPLS was encountered, also add parsed extension
+					if (ext_class == ICMP_EXTENSION_MPLS_CLASS && ext_type == ICMP_EXTENSION_MPLS_TYPE) {
+						// FIXME here I am assuming that size is always a multiple of 4
+						for (unsigned int idx = 0; idx < payload.size(); idx+=4) {
+							unsigned int label = (payload[idx] << 12) + (payload[idx + 1] << 4) + (payload[idx + 2] >> 4);
+							unsigned int experimental = (payload[idx + 2] & 0x0f) >> 1;
+							unsigned int bottom_of_stack = payload[idx + 2] & 0x01;
+							unsigned int ttl = payload[idx + 3];
+							Json::Value mpls_node = Json::Value();
+							mpls_node["label"] = label;
+							mpls_node["experimental"] = experimental;
+							mpls_node["bottom_of_stack"] = bottom_of_stack;
+							mpls_node["ttl"] = ttl;
+							root["received"]["icmp"]["mpls_labels"].append(mpls_node);
+						}
+					}
+				}
+			}
 		} catch (Tins::pdu_not_found) {
 		}
 	} else {

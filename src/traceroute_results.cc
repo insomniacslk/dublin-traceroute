@@ -135,24 +135,26 @@ void TracerouteResults::show(std::ostream &stream) {
 						<< icmpm.get(icmp.type(), icmp.code()) << "'";
 					if (icmp.has_extensions()) {
 						for (auto &extension : icmp.extensions().extensions()) {
-
-							if (static_cast<int>(extension.extension_class()) == ICMP_EXTENSION_MPLS_CLASS && static_cast<int>(extension.extension_type()) == ICMP_EXTENSION_MPLS_TYPE) {
+							unsigned int ext_class = static_cast<unsigned int>(extension.extension_class());
+							unsigned int ext_type = static_cast<unsigned int>(extension.extension_type());
+							auto &payload = extension.payload();
+							if (ext_class == ICMP_EXTENSION_MPLS_CLASS && ext_type == ICMP_EXTENSION_MPLS_TYPE) {
+								unsigned int label = (payload[0] << 12) + (payload[1] << 4) + (payload[2] >> 4);
+								unsigned int experimental = (payload[2] & 0x0f) >> 1;
+								unsigned int bottom_of_stack = payload[2] & 0x01;
+								unsigned int ttl = payload[3];
+								stream << ", MPLS(label=" << label << ", experimental=" << experimental << ", bottom_of_stack=" << bottom_of_stack << ", ttl=" << ttl << ")";
+							} else {
 								stream
 									<< ", Extension("
-									<< "class=" << static_cast<int>(extension.extension_class())
-									<< ", type=" << static_cast<int>(extension.extension_type())
-									<< ", payload_size=" << static_cast<int>(extension.payload().size())
+									<< "class=" << ext_class
+									<< ", type=" << ext_type
+									<< ", payload_size=" << payload.size()
 									<< ", payload=\"";
-								for (auto &byte : extension.payload())
+								for (auto &byte : payload)
 									stream << "\\x" << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(byte);
 								stream << std::dec;
 								stream << ")";
-							} else {
-								unsigned int label = (extension.payload()[0] << 12) + (extension.payload()[1] << 4) + (extension.payload()[2] >> 4);
-								unsigned int experimental = (extension.payload()[2] & 0xf) >> 1;
-								unsigned int bottom_of_stack = extension.payload()[2] & 0x1;
-								unsigned int ttl = extension.payload()[3];
-								stream << ", MPLS(label=" << label << ", experimental=" << experimental << ", bottom_of_stack=" << bottom_of_stack << ", ttl=" << ttl << ")";
 							}
 						}
 					}
