@@ -214,7 +214,7 @@ At the moment, a lot of things, including:
 * improve the the command-line tool by adding more arguments
 * introduce more tracerouting strategies: at the moment it sends all the packets at once
 * send more than one packet per hop (traceroute sends 3 packets per hop)
-* support MPLS
+* ~~support MPLS~~ done in https://github.com/insomniacslk/dublin-traceroute/issues/6
 * support ECMP on IPv6
 * support for TCP and ICMP probes
 * add Path MTU Discovery to detect latencies introduced by fragmentation
