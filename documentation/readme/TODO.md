@@ -4,6 +4,7 @@
 * Support IPv6
 * implement ICMP-paris
 * testing!
+* add min-ttl option
 * Implement merge of ICMP-paris, UDP-paris and TCP-paris probes
 * Implement Bellovin's  technique using response's IP ID.
   [paper](https://www.cs.columbia.edu/~smb/papers/fnat.pdf) and
