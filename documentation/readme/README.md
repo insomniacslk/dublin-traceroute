@@ -51,7 +51,7 @@ different lengths:
 [[diagram source]](tr03.dot)
 
 The team who created Paris-traceroute invented a technique that leverages the ECMP
-flow hashing to probe all the possible paths. Dublin Traceroute dows what
+flow hashing to probe all the possible paths. Dublin Traceroute does what
 Paris-traceroute can do, plus a bit more.
 
 ### So, what's new?
