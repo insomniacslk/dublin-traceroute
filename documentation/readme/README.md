@@ -237,7 +237,7 @@ Yes.
 
 #### How do I ask a question or contribute?
 
-Go to the [Dublin Traceroute mailing list](https://groups.google.com/forum/#!forum/dublin-traceroute) and just ask :)
+Go to the [Dublin Traceroute mailing list](https://groups.google.com/forum/#!forum/dublin-traceroute) or to IRC, #dublin-traceroute @ FreeNode, and just ask :)
 
 Otherwise you can [open an issue](https://github.com/insomniacslk/dublin-traceroute/issues) or [make a pull request](https://github.com/insomniacslk/dublin-traceroute/pulls) on the GitHub page of dublin-traceroute, or contact me directly (see below).
 
