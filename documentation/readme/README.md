@@ -100,7 +100,7 @@ shared library and a Python module to make it easily usable and embeddable.
 
 ## Examples
 
-Below the graphical output of a traceroute to Google's pubic DNS, 8.8.8.8. You can see the various
+Below the graphical output of a traceroute to Google's public DNS, 8.8.8.8. You can see the various
 paths, the NAT detecton and the ICMP codes of the received packets.
 
 ![dublin-traceroute example](traceroute_8.8.8.8.png)
