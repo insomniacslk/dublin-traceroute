@@ -139,6 +139,7 @@ Json::Value Hop::to_json() {
 		root["received"]["ip"]["src"] = received()->src_addr().to_string();
 		root["received"]["ip"]["dst"] = received()->dst_addr().to_string();
 		root["received"]["ip"]["ttl"] = received()->ttl();
+		root["received"]["ip"]["id"] = received()->id();
 
 		// ICMP layer
 		try {
