@@ -118,6 +118,8 @@ Json::Value Hop::to_json() {
 
 	// Serialize the sent packet
 	root["is_last"] = is_last_hop();
+	root["sent"]["timestamp"] = std::to_string(sent_timestamp()->seconds()) + "." + std::to_string(sent_timestamp()->microseconds());
+
 	// IP layer
 	root["sent"]["ip"]["src"] = sent()->src_addr().to_string();
 	root["sent"]["ip"]["dst"] = sent()->dst_addr().to_string();
@@ -134,6 +136,7 @@ Json::Value Hop::to_json() {
 	// If present, serialize the received packet
 	if (received()) {
 		root["rtt_usec"] = rtt();
+		root["received"]["timestamp"] = std::to_string(received_timestamp()->seconds()) + "." + std::to_string(received_timestamp()->microseconds());
 
 		// IP layer
 		root["received"]["ip"]["src"] = received()->src_addr().to_string();
