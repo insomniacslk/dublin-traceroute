@@ -7,7 +7,7 @@ Dublin Traceroute is a NAT-aware multipath traceroute tool.
 
 And this page is just informational. **You should really read more at https://dublin-traceroute.net** .
 
-If you are looking for the Python bindings, check out [python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute)
+If you are looking for the Python bindings, check out [python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute). This module contains most functionalities, including diagrams and statistic analysis.
 
 Feedback is extremely welcome! Find my contacts on https://insomniac.slackware.it or post in the [Dublin Traceroute mailing list](https://groups.google.com/forum/#!forum/dublin-traceroute) .
 
