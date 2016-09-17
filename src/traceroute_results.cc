@@ -215,6 +215,7 @@ void TracerouteResults::compress() {
 }
 
 std::string TracerouteResults::to_json() {
+	compress();
 	std::stringstream json;
 	Json::Value root;
 
