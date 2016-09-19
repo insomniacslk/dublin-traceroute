@@ -205,6 +205,34 @@ or for clang:
 CXX=clang++ make
 ```
 
+## Running
+
+`dublin-traceroute` requires raw sockets. This means that you either have to run it as `root` (via `sudo` or setuid on the executable) or by using the `CAP_NET_RAW` capability.
+
+The usage is very simple, and explained in the help message:
+
+```bash
+$ ./dublin-traceroute 
+Arguments did not match expected patterns
+Dublin Traceroute
+
+Usage:
+  dublin-traceroute <target> [--sport=SRC_PORT]
+                             [--dport=dest_base_port]
+                             [--npaths=num_paths]
+                             [--max-ttl=max_ttl]
+
+Options:
+  -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
+  -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
+  -n NPATHS --npaths=NPATHS     the number of paths to probe
+  -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
+
+
+See documentation at https://dublin-traceroute.net
+Please report bugs at https://github.com/insomniacslk/dublin-traceroute
+```
+
 ## What is missing?
 
 At the moment, a lot of things, including:
