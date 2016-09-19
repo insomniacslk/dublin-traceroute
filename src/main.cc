@@ -38,10 +38,10 @@ Please report bugs at https://github.com/insomniacslk/dublin-traceroute
 int
 main(int argc, char **argv) {
 	std::string	target;
-	uint16_t	sport = DublinTraceroute::default_srcport;
-	uint16_t	dport = DublinTraceroute::default_dstport;
-	uint16_t	npaths = DublinTraceroute::default_npaths;
-	uint16_t	max_ttl = DublinTraceroute::default_max_ttl;
+	long	sport = DublinTraceroute::default_srcport;
+	long	dport = DublinTraceroute::default_dstport;
+	long	npaths = DublinTraceroute::default_npaths;
+	long	max_ttl = DublinTraceroute::default_max_ttl;
 
 	std::map <std::string, docopt::value> args = docopt::docopt(
 			USAGE,
@@ -73,6 +73,28 @@ main(int argc, char **argv) {
 			CONVERT_TO_LONG_OR_EXIT(arg.second, max_ttl);
 	}
 	#undef CONVERT_TO_LONG_OR_EXIT
+	std::cout << "Source port: " << sport << std::endl;
+	if (sport < 1 || sport > 65535) {
+		std::cerr << "Source port must be between 1 and 65535" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	
+	if (dport < 1 || dport > 65535) {
+		std::cerr << "Destination port must be between 1 and 65535" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	if (npaths < 1 || npaths > 65535) {
+		std::cerr << "Number of paths must be between 1 and 65535" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	if (max_ttl < 1 || max_ttl > 255) {
+		std::cerr << "Max TTL must be between 1 and 255" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	if (dport + npaths - 1 > 65535) {
+		std::cerr << "Destination port + number of paths must not exceed 65535" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
 
 	std::cout << "Starting dublin-traceroute" << std::endl;
 
