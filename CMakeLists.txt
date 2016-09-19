@@ -9,7 +9,10 @@ set (dublin-traceroute_VERSION_MINOR_2)
 # /usr/local
 list(APPEND CMAKE_PREFIX_PATH /usr/local)
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
+include_directories(
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include/docopt"
+)
 
 add_library(dublintraceroute SHARED
     src/common.cc
@@ -36,7 +39,14 @@ endif (${libtins_FOUND})
 
 pkg_search_module(JSONCPP REQUIRED jsoncpp)
 
-add_executable(dublin-traceroute src/main.cc)
+add_executable(dublin-traceroute
+    src/main.cc
+    src/docopt/docopt.cpp
+    include/docopt/docopt.h
+    include/docopt/docopt_private.h
+    include/docopt/docopt_util.h
+    include/docopt/docopt_value.h
+)
 target_link_libraries(dublintraceroute ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(dublin-traceroute dublintraceroute)
 target_link_libraries(dublintraceroute tins)

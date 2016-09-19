@@ -16,6 +16,8 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#define VERSION	"0.2"
+
 #include <map>
 
 #include <tins/tins.h>
