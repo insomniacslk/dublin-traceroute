@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project (dublin-traceroute)
 
 set (dublin-traceroute_VERSION_MAJOR_0)
-set (dublin-traceroute_VERSION_MINOR_2)
+set (dublin-traceroute_VERSION_MINOR_3)
 
 # ensure that /usr/local is used to find dependencies. This is especially
 # necessary for brew on OSX and for libraries installed manually under
