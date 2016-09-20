@@ -16,6 +16,7 @@
 
 static const char USAGE[] =
 R"(Dublin Traceroute
+Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
   dublin-traceroute <target> [--sport=SRC_PORT]
