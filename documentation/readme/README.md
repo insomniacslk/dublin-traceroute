@@ -212,8 +212,7 @@ CXX=clang++ make
 The usage is very simple, and explained in the help message:
 
 ```bash
-$ ./dublin-traceroute 
-Arguments did not match expected patterns
+$ ./dublin-traceroute --help
 Dublin Traceroute
 
 Usage:
@@ -221,12 +220,14 @@ Usage:
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
                              [--max-ttl=max_ttl]
+                             [--dsr]
 
 Options:
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
+  -d --dsr                      the network has a DSR NAT. May help when you only see a few hops
 
 
 See documentation at https://dublin-traceroute.net
