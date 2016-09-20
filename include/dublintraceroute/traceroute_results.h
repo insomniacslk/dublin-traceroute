@@ -24,10 +24,10 @@ class TracerouteResults {
 private:
 	std::shared_ptr<flow_map_t> flows_;
 	bool compressed_;
-	bool dsr_;
+	bool broken_nat_;
 
 public:
-	TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool dsr /* = false */);
+	TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool broken_nat /* = false */);
 	~TracerouteResults() { };
 	inline flow_map_t &flows() { return *flows_; }
 	std::shared_ptr<IP> match_packet(const Packet &packet);

@@ -21,8 +21,8 @@
 #include "dublintraceroute/icmp_messages.h"
 
 
-TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool dsr = true):
-		flows_(flows), compressed_(false), dsr_(dsr) {
+TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool broken_nat = true):
+		flows_(flows), compressed_(false), broken_nat_(broken_nat) {
 }
 
 
@@ -68,7 +68,7 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 	unsigned int index = 0;
 	for (auto &hop: *hops) {
 		auto &sent = hop.sent()->rfind_pdu<IP>();
-		if (!dsr_) {
+		if (!broken_nat_) {
 			if (sent.src_addr() != inner_ip.src_addr())
 				continue;
 		}

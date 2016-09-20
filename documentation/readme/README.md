@@ -85,8 +85,12 @@ Dublin Traceroute also features a Python extension on top of the C++ core if you
 prefer. The bindings now live in a separate repository, see
 [python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute) .
 
-**The third is that it supports DSR NATs.**
-Dublin Traceroute is able to work with Direct Server Response NATs that some hosting providers use. Neither paris-traceroute nor regular traceroute would work with it. When you run a regular traceroute or paris-traceroute through this kind of NAT, you will see no response from all the hops located just after the DSR NAT boxes.
+**The third is that it supports broken NATs.**
+Dublin Traceroute is able to work with some broken NATs that some hosting providers use
+(e.g. I found that Scaleway does that). Neither paris-traceroute nor regular traceroute
+would work with it, but it's not their fault as this is a network misconfiguration. When
+you run a regular traceroute or paris-traceroute through this kind of NAT, you will see
+no response from all the hops located just after these broken NAT boxes.
 
 See the [examples](examples.md) to see Dublin Traceroute at work.
 
@@ -223,14 +227,14 @@ Usage:
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
                              [--max-ttl=max_ttl]
-                             [--dsr]
+                             [--broken-nat]
 
 Options:
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
-  -d --dsr                      the network has a DSR NAT. May help when you only see a few hops
+  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). May help when you see only a few hops
 
 
 See documentation at https://dublin-traceroute.net

@@ -23,14 +23,14 @@ Usage:
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
                              [--max-ttl=max_ttl]
-                             [--dsr]
+                             [--broken-nat]
 
 Options:
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
-  -d --dsr                      the network has a DSR NAT. May help when you only see a few hops
+  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). May help when you see only a few hops
 
 
 See documentation at https://dublin-traceroute.net
@@ -45,7 +45,7 @@ main(int argc, char **argv) {
 	long	dport = DublinTraceroute::default_dstport;
 	long	npaths = DublinTraceroute::default_npaths;
 	long	max_ttl = DublinTraceroute::default_max_ttl;
-	bool	dsr = DublinTraceroute::default_dsr;
+	bool	broken_nat = DublinTraceroute::default_broken_nat;
 
 	std::map <std::string, docopt::value> args = docopt::docopt(
 			USAGE,
@@ -75,12 +75,11 @@ main(int argc, char **argv) {
 			CONVERT_TO_LONG_OR_EXIT(arg.second, npaths);
 		} else if (arg.first == "--max-ttl") {
 			CONVERT_TO_LONG_OR_EXIT(arg.second, max_ttl);
-		} else if (arg.first == "--dsr") {
-			dsr = arg.second.asBool();
+		} else if (arg.first == "--broken-nat") {
+			broken_nat = arg.second.asBool();
 		}
 	}
 	#undef CONVERT_TO_LONG_OR_EXIT
-	std::cout << "Source port: " << sport << std::endl;
 	if (sport < 1 || sport > 65535) {
 		std::cerr << "Source port must be between 1 and 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -111,7 +110,7 @@ main(int argc, char **argv) {
 			dport,
 			npaths,
 			max_ttl,
-			dsr
+			broken_nat
 	);
 	std::cout
 		<< "Traceroute from 0.0.0.0:" << Dublin.srcport()
