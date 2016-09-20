@@ -56,7 +56,7 @@ Paris-traceroute can do, plus a bit more.
 
 ### So, what's new?
 
-Two things:
+Three things:
 
 **One is the way NATs are detected.**  
 Dublin Traceroute forges the IP ID **in the probe packet** and analyzes the
@@ -78,12 +78,15 @@ technique. If I am wrong, please let me know so that I can give the credit where
 due.
 
 
-**The other is that it is a modular rewrite.**  
+**The second is that it is a modular rewrite.**  
 Dublin Traceroute is written in C++11 on top of a beautiful network packet sniffing and
 crafting library, [libtins](https://libtins.github.io).
 Dublin Traceroute also features a Python extension on top of the C++ core if you
 prefer. The bindings now live in a separate repository, see
 [python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute) .
+
+**The third is that it supports DSR NATs.**
+Dublin Traceroute is able to work with Direct Server Response NATs that some hosting providers use. Neither paris-traceroute nor regular traceroute would work with it. When you run a regular traceroute or paris-traceroute through this kind of NAT, you will see no response from all the hops located just after the DSR NAT boxes.
 
 See the [examples](examples.md) to see Dublin Traceroute at work.
 
