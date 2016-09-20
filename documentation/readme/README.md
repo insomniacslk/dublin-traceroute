@@ -142,7 +142,7 @@ on Ubuntu:
 
 Independently of the OS, to build dublin-traceroute you need:
   * cmake
-  * gcc >= 4.7 or clang >= 3.3
+  * gcc >= 4.9 or clang >= 3.8
 
 #### Building on Linux
 
