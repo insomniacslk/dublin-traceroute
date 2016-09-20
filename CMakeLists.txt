@@ -3,6 +3,7 @@ project (dublin-traceroute)
 
 set (dublin-traceroute_VERSION_MAJOR_0)
 set (dublin-traceroute_VERSION_MINOR_3)
+set (dublin-traceroute_VERSION_PATCH_2)
 
 # ensure that /usr/local is used to find dependencies. This is especially
 # necessary for brew on OSX and for libraries installed manually under
