@@ -170,7 +170,7 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	}
 	std::shared_ptr<Sniffer> sniffer(_sniffer);
 
-	TracerouteResults *results = new TracerouteResults(flows);
+	TracerouteResults *results = new TracerouteResults(flows, dsr());
 
 	// configure the sniffing handler
 	auto handler = std::bind(

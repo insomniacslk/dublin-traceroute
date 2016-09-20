@@ -21,8 +21,8 @@
 #include "dublintraceroute/icmp_messages.h"
 
 
-TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows):
-		flows_(flows), compressed_(false) {
+TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool dsr = true):
+		flows_(flows), compressed_(false), dsr_(dsr) {
 }
 
 
@@ -68,8 +68,10 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 	unsigned int index = 0;
 	for (auto &hop: *hops) {
 		auto &sent = hop.sent()->rfind_pdu<IP>();
-		if (sent.src_addr() != inner_ip.src_addr())
-			continue;
+		if (!dsr_) {
+			if (sent.src_addr() != inner_ip.src_addr())
+				continue;
+		}
 		auto &udp = hop.sent()->rfind_pdu<UDP>();
 		/*
 		 * The original paris-traceroute would match the checksum, but

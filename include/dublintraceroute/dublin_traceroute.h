@@ -46,6 +46,7 @@ private:
 	IPv4Address		 target_;
 	const uint8_t		 npaths_,
 				 max_ttl_;
+	const bool		 dsr_; // direct server response
 	std::mutex		 mutex_tracerouting,
 				 mutex_sniffed_packets;
 	IPv4Address		 my_address;
@@ -56,31 +57,36 @@ public:
 	static const uint16_t	 default_dstport = 33434;
 	static const uint8_t	 default_npaths = 20;
 	static const uint8_t	 default_max_ttl = 30;
+	static const bool	 default_dsr = false;
 	DublinTraceroute(
 			const std::string &dst,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
-			const uint8_t max_ttl = default_max_ttl
+			const uint8_t max_ttl = default_max_ttl,
+			const bool dsr = default_dsr
 			):
 				srcport_(srcport),
 				dstport_(dstport),
 				dst_(dst),
 				npaths_(npaths),
-				max_ttl_(max_ttl)
+				max_ttl_(max_ttl),
+				dsr_(dsr)
 	{ }
 	DublinTraceroute(
 			const char *dst,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
-			const uint8_t max_ttl = default_max_ttl
+			const uint8_t max_ttl = default_max_ttl,
+			const bool dsr = default_dsr
 		       ):
 				srcport_(srcport),
 				dstport_(dstport),
 				dst_(std::string(dst)),
 				npaths_(npaths),
-				max_ttl_(max_ttl)
+				max_ttl_(max_ttl),
+				dsr_(dsr)
 	{ }
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
@@ -88,13 +94,15 @@ public:
 		dstport_(source.dstport_),
 		dst_(source.dst_),
 		npaths_(source.npaths_),
-		max_ttl_(source.max_ttl_)
+		max_ttl_(source.max_ttl_),
+		dsr_(source.dsr_)
 	{ }
 
 	inline const uint16_t srcport() const { return srcport_; }
 	inline const uint16_t dstport() const { return dstport_; }
 	inline const uint8_t npaths() const { return npaths_; }
 	inline const uint8_t max_ttl() const { return max_ttl_; }
+	inline const bool dsr() const { return dsr_; }
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
 	void target(const IPv4Address &addr) { target_ = addr; }
