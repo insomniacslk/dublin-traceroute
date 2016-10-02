@@ -16,7 +16,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#define VERSION	"0.2"
+#define VERSION	"0.3.3"
 
 #include <map>
 
