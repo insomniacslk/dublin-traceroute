@@ -54,8 +54,42 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 add_dependencies(dublin-traceroute dublintraceroute)
 
+if (NOT CMAKE_INSTALL_BINDIR)
+    set(CMAKE_INSTALL_BINDIR "bin")
+endif()
+
+if (NOT CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib")
+endif()
+
 install(TARGETS dublin-traceroute dublintraceroute
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 install(DIRECTORY include/dublintraceroute DESTINATION include)
+
+# find setcap
+find_program(SETCAP_EXECUTABLE
+    NAMES
+        setcap
+    PATHS
+        /bin
+        /usr/bin
+        /usr/local/bin
+        /sbin
+)
+
+if (SETCAP_EXECUTABLE)
+    install(CODE "execute_process(
+        COMMAND
+            ${SETCAP_EXECUTABLE}
+            cap_net_raw+ep
+            ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/dublin-traceroute
+        RESULT_VARIABLE
+            SETCAP_RESULT
+        )
+        if (SETCAP_RESULT)
+            message(WARNING \"setcap failed (${SETCAP_RESULT})\")
+        endif()"
+    )
+endif()
