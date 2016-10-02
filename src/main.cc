@@ -10,11 +10,25 @@
 
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
+#include <getopt.h>
 
 #include <dublintraceroute/dublin_traceroute.h>
-#include <docopt/docopt.h>
 
-static const char USAGE[] =
+const char *shortopts = "hvs:d:n:t:b";
+const struct option longopts[] = {
+	{"help", no_argument, NULL, 'h'},
+	{"version", no_argument, NULL, 'v'},
+	{"sport", required_argument, NULL, 's'},
+	{"dport", required_argument, NULL, 'd'},
+	{"npaths", required_argument, NULL, 'n'},
+	{"max-ttl", required_argument, NULL, 't'},
+	{"broken-nat", no_argument, NULL, 'b'},
+	{NULL, 0, NULL, 0},
+};
+
+static void usage() {
+	std::cout <<
 R"(Dublin Traceroute
 Written by Andrea Barberio - https://insomniac.slackware.it
 
@@ -24,18 +38,24 @@ Usage:
                              [--npaths=num_paths]
                              [--max-ttl=max_ttl]
                              [--broken-nat]
+                             [--help]
+                             [--version]
 
 Options:
+  -h --help                     this help
+  -v --version                  print the version of Dublin Traceroute
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
-  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). May help when you see only a few hops
+  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 
 See documentation at https://dublin-traceroute.net
 Please report bugs at https://github.com/insomniacslk/dublin-traceroute
+Additional features in the Python module at https://github.com/insomniacslk/python-dublin-traceroute
 )";
+}
 
 
 int
@@ -47,39 +67,62 @@ main(int argc, char **argv) {
 	long	max_ttl = DublinTraceroute::default_max_ttl;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 
-	std::map <std::string, docopt::value> args = docopt::docopt(
-			USAGE,
-			{ argv + 1, argv + argc},
-			true,	// show help if requested
-			"Dublin Traceroute v" VERSION
-			);
-
-	#define CONVERT_TO_LONG_OR_EXIT(arg, out_var) {			\
-		if (arg) {						\
-			try {						\
-				out_var = arg.asLong();			\
-			} catch (std::invalid_argument) {		\
-				std::cout << USAGE << std::endl;	\
-				std::exit(EXIT_FAILURE);		\
-			}						\
-		}							\
+	if (geteuid() == 0) {
+		std::cout
+			<< "WARNING: you are running this program as root. Consider setting the CAP_NET_RAW " << std::endl
+			<< "         capability and running as non-root user as a more secure alternative." << std::endl;
 	}
-	for (auto const& arg : args) {
-		if (arg.first == "<target>")
-			target = arg.second.asString();
-		else if (arg.first == "--sport") {
-			CONVERT_TO_LONG_OR_EXIT(arg.second, sport);
-		} else if (arg.first == "--dport") {
-			CONVERT_TO_LONG_OR_EXIT(arg.second, dport);
-		} else if (arg.first == "--npaths") {
-			CONVERT_TO_LONG_OR_EXIT(arg.second, npaths);
-		} else if (arg.first == "--max-ttl") {
-			CONVERT_TO_LONG_OR_EXIT(arg.second, max_ttl);
-		} else if (arg.first == "--broken-nat") {
-			broken_nat = arg.second.asBool();
+
+	int	 index,
+		 iarg = 0;
+
+	#define TO_LONG(name, value) {								\
+			try {									\
+				name = std::stol(value);					\
+			} catch (std::invalid_argument) {					\
+				std::cerr << "Invalid argument. See --help" << std::endl;	\
+				std::exit(EXIT_FAILURE);					\
+			}									\
+		}
+	while ((iarg = getopt_long(argc, argv, shortopts, longopts, &index)) != -1) {
+		switch (iarg) {
+			case 'h':
+				usage();
+				std::exit(EXIT_SUCCESS);
+			case 'v':
+				std::cout << "Dublin Traceroute " << VERSION << std::endl;
+				std::exit(EXIT_SUCCESS);
+			case 's':
+				TO_LONG(sport, optarg);
+				break;
+			case 'd':
+				TO_LONG(dport, optarg);
+				break;
+			case 'n':
+				TO_LONG(npaths, optarg);
+				break;
+			case 't':
+				TO_LONG(max_ttl, optarg);
+				break;
+			case 'b':
+				broken_nat = true;
+				break;
+			default:
+				std::cerr << "Invalid argument: " << iarg << ". See --help" << std::endl;
+				std::exit(EXIT_FAILURE);
 		}
 	}
-	#undef CONVERT_TO_LONG_OR_EXIT
+	#undef TO_LONG
+	if (optind == argc) {
+		std::cerr << "Target is required. See --help" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	if (optind + 1 < argc) {
+		std::cerr << "Exactly one target is required. See --help" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	target = argv[optind];
+
 	if (sport < 1 || sport > 65535) {
 		std::cerr << "Source port must be between 1 and 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
