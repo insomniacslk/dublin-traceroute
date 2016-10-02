@@ -261,7 +261,7 @@ At the moment, a lot of things, including:
 * support for TCP and ICMP probes
 * add Path MTU Discovery to detect latencies introduced by fragmentation
 * improve the documentation
-* improve the build system (there is just a static Makefile now)
+* ~~improve the build system (there is just a static Makefile now)~~ done in [commit ffa9d3c](https://github.com/insomniacslk/dublin-traceroute/commit/ffa9d3c306fb772e2c95963a94cdc386b0126206), using CMake
 
 See [TODO.md](TODO.md) for more details.
 
