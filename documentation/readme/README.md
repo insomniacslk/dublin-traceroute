@@ -214,13 +214,14 @@ CXX=clang++ make
 
 ## Running
 
-`dublin-traceroute` requires raw sockets. This means that you either have to run it as `root` (via `sudo` or setuid on the executable) or by using the `CAP_NET_RAW` capability.
+`dublin-traceroute` requires raw sockets. This means that you should need the CAP_NET_RAW capability set (see `setcap(8)`). Alternatively you can run it as root, but this is not recommended, and `dublin-traceroute` will print a warning.
 
 The usage is very simple, and explained in the help message:
 
 ```bash
 $ ./dublin-traceroute --help
 Dublin Traceroute
+Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
   dublin-traceroute <target> [--sport=SRC_PORT]
@@ -228,17 +229,22 @@ Usage:
                              [--npaths=num_paths]
                              [--max-ttl=max_ttl]
                              [--broken-nat]
+                             [--help]
+                             [--version]
 
 Options:
+  -h --help                     this help
+  -v --version                  print the version of Dublin Traceroute
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
-  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). May help when you see only a few hops
+  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 
 See documentation at https://dublin-traceroute.net
 Please report bugs at https://github.com/insomniacslk/dublin-traceroute
+Additional features in the Python module at https://github.com/insomniacslk/python-dublin-traceroute
 ```
 
 ## What is missing?
