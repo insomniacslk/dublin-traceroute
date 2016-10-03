@@ -69,6 +69,11 @@ std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
 		target(IPv4Address(dst()));
 	}
 
+	// check for valid min and max TTL
+	if (min_ttl_ > max_ttl_) {
+		throw std::invalid_argument("max_ttl must be greater or equal than min_ttl");
+	}
+
 	// forge the packets to send
 	for (uint16_t dport = dstport(); dport < dstport() + npaths(); dport++) {
 		hops_t hops(new std::vector<Hop>());
@@ -86,7 +91,7 @@ std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
 		 *   UDP.sport
 		 *   UDP.dport
 		 */
-		for (uint8_t ttl = 1; ttl <= max_ttl_; ttl++) {
+		for (uint8_t ttl = min_ttl_; ttl <= max_ttl_; ttl++) {
 			/*
 		 	 * Adjust the payload for each flow to obtain the same UDP
 		 	 * checksum. The UDP checksum is used to identify the flow.
@@ -170,7 +175,7 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	}
 	std::shared_ptr<Sniffer> sniffer(_sniffer);
 
-	TracerouteResults *results = new TracerouteResults(flows, broken_nat());
+	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
 
 	// configure the sniffing handler
 	auto handler = std::bind(

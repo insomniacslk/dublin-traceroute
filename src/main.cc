@@ -15,14 +15,15 @@
 
 #include <dublintraceroute/dublin_traceroute.h>
 
-const char *shortopts = "hvs:d:n:t:b";
+const char *shortopts = "hvs:d:n:t:T:b";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
 	{"sport", required_argument, NULL, 's'},
 	{"dport", required_argument, NULL, 'd'},
 	{"npaths", required_argument, NULL, 'n'},
-	{"max-ttl", required_argument, NULL, 't'},
+	{"min-ttl", required_argument, NULL, 't'},
+	{"max-ttl", required_argument, NULL, 'T'},
 	{"broken-nat", no_argument, NULL, 'b'},
 	{NULL, 0, NULL, 0},
 };
@@ -36,6 +37,7 @@ Usage:
   dublin-traceroute <target> [--sport=SRC_PORT]
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
+                             [--min-ttl=min_ttl]
                              [--max-ttl=max_ttl]
                              [--broken-nat]
                              [--help]
@@ -47,7 +49,8 @@ Options:
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
-  -t MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
+  -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe
+  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 
@@ -64,6 +67,7 @@ main(int argc, char **argv) {
 	long	sport = DublinTraceroute::default_srcport;
 	long	dport = DublinTraceroute::default_dstport;
 	long	npaths = DublinTraceroute::default_npaths;
+	long	min_ttl = DublinTraceroute::default_min_ttl;
 	long	max_ttl = DublinTraceroute::default_max_ttl;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 
@@ -102,6 +106,9 @@ main(int argc, char **argv) {
 				TO_LONG(npaths, optarg);
 				break;
 			case 't':
+				TO_LONG(min_ttl, optarg);
+				break;
+			case 'T':
 				TO_LONG(max_ttl, optarg);
 				break;
 			case 'b':
@@ -136,8 +143,16 @@ main(int argc, char **argv) {
 		std::cerr << "Number of paths must be between 1 and 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
+	if (min_ttl < 1 || min_ttl > 255) {
+		std::cerr << "Min TTL must be between 1 and 255" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
 	if (max_ttl < 1 || max_ttl > 255) {
 		std::cerr << "Max TTL must be between 1 and 255" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	if (min_ttl > max_ttl) {
+		std::cerr << "Min TTL must be smaller or equal than max TTL" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 	if (dport + npaths - 1 > 65535) {
@@ -152,6 +167,7 @@ main(int argc, char **argv) {
 			sport,
 			dport,
 			npaths,
+			min_ttl,
 			max_ttl,
 			broken_nat
 	);
@@ -160,6 +176,7 @@ main(int argc, char **argv) {
 		<< " to " << Dublin.dst()
 		<< ":" << Dublin.dstport() << "~" << (Dublin.dstport() + npaths - 1)
 		<< " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
+		<< ", min TTL is " << min_ttl
 		<< ", max TTL is " << max_ttl << ")"
 		<< std::endl;
 

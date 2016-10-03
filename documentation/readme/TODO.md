@@ -15,7 +15,7 @@
 * break on destination unreachable
 * improve documentation
 * put everything under a namespace
-* implement command line parser in main.cc
+* ~~implement command line parser in main.cc~~ done in [commit 8a3ae75](https://github.com/insomniacslk/dublin-traceroute/commit/8a3ae7513645afdad5eabd8d6f368383dff98c8b)
 * Add an uninstall target in the Makefile for the python extension
 * Fix the memory leak where TracerouteResults is not freed
 * IP_ID_MATCHING must become a constructor parameter
@@ -30,3 +30,4 @@
 * Integrate the ASN graph with a world map (e.g. openstreetmap or google maps)
 * Add --webserver to the python CLI to expose a SimpleHTTPServer that serves a PNG with the traceroute diagram
 * heat map/flame graph of the network latencies over time (links history)
+* ~~improve the build system (there is just a static Makefile now)~~ done in [commit ffa9d3c](https://github.com/insomniacslk/dublin-traceroute/commit/ffa9d3c306fb772e2c95963a94cdc386b0126206), using CMake
