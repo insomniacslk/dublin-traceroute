@@ -45,6 +45,7 @@ private:
 	const std::string	 dst_;
 	IPv4Address		 target_;
 	const uint8_t		 npaths_,
+				 min_ttl_,
 				 max_ttl_;
 	const bool		 broken_nat_;
 	std::mutex		 mutex_tracerouting,
@@ -56,6 +57,7 @@ public:
 	static const uint16_t	 default_srcport = 12345;
 	static const uint16_t	 default_dstport = 33434;
 	static const uint8_t	 default_npaths = 20;
+	static const uint8_t	 default_min_ttl = 1;
 	static const uint8_t	 default_max_ttl = 30;
 	static const bool	 default_broken_nat = false;
 	DublinTraceroute(
@@ -63,6 +65,7 @@ public:
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
+			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
 			const bool broken_nat = default_broken_nat
 			):
@@ -70,6 +73,7 @@ public:
 				dstport_(dstport),
 				dst_(dst),
 				npaths_(npaths),
+				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
 				broken_nat_(broken_nat)
 	{ }
@@ -78,6 +82,7 @@ public:
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
+			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
 			const bool broken_nat = default_broken_nat
 		       ):
@@ -85,6 +90,7 @@ public:
 				dstport_(dstport),
 				dst_(std::string(dst)),
 				npaths_(npaths),
+				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
 				broken_nat_(broken_nat)
 	{ }
@@ -94,6 +100,7 @@ public:
 		dstport_(source.dstport_),
 		dst_(source.dst_),
 		npaths_(source.npaths_),
+		min_ttl_(source.min_ttl_),
 		max_ttl_(source.max_ttl_),
 		broken_nat_(source.broken_nat_)
 	{ }
@@ -101,6 +108,7 @@ public:
 	inline const uint16_t srcport() const { return srcport_; }
 	inline const uint16_t dstport() const { return dstport_; }
 	inline const uint8_t npaths() const { return npaths_; }
+	inline const uint8_t min_ttl() const { return min_ttl_; }
 	inline const uint8_t max_ttl() const { return max_ttl_; }
 	inline const bool broken_nat() const { return broken_nat_; }
 	inline const std::string &dst() const { return dst_; }

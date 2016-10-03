@@ -21,8 +21,8 @@
 #include "dublintraceroute/icmp_messages.h"
 
 
-TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const bool broken_nat = true):
-		flows_(flows), compressed_(false), broken_nat_(broken_nat) {
+TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl = 1, const bool broken_nat = true):
+		flows_(flows), min_ttl(min_ttl), compressed_(false), broken_nat_(broken_nat) {
 }
 
 
@@ -107,7 +107,7 @@ void TracerouteResults::show(std::ostream &stream) {
 	icmpmessages icmpm;
 
 	for (auto &iter: flows()) {
-		unsigned int hopnum = 1;
+		unsigned int hopnum = min_ttl;
 		unsigned int index = 0;
 		uint16_t prev_nat_id = 0;
 		stream << "== Flow ID " << iter.first << " ==" << std::endl;
@@ -117,7 +117,7 @@ void TracerouteResults::show(std::ostream &stream) {
 				stream << "*" << std::endl;
 			} else {
 				// print the IP address of the hop
-				stream << hop.received()->src_addr() << " (" << *hop.name() << ")"; 
+				stream << hop.received()->src_addr() << " (" << *hop.name() << ")";
 
 				// print the response IP ID, useful to detect
 				// loops due to NATs, fake hops, etc
