@@ -4,7 +4,7 @@
 * Support IPv6
 * implement ICMP-paris
 * testing!
-* add min-ttl option
+* ~~add min-ttl option~~ done in [commit 6b6be67](https://github.com/insomniacslk/dublin-traceroute/commit/6b6be67df1ea17c7de20b8ee1e4fab664ee177eb)
 * Implement merge of ICMP-paris, UDP-paris and TCP-paris probes
 * Implement Bellovin's  technique using response's IP ID.
   [paper](https://www.cs.columbia.edu/~smb/papers/fnat.pdf) and
