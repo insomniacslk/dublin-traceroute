@@ -1,8 +1,8 @@
 class DublinTraceroute < Formula
   desc "NAT-aware multipath tracerouting tool"
   homepage "https://dublin-traceroute.net"
-  url "https://github.com/insomniacslk/dublin-traceroute/archive/v0.3.1.tar.gz"
-  sha256 "d6e72d17cd0a5ea3f654acd277acb44e80d65d370acea36ae4d98e74d8ee9911"
+  url "https://github.com/insomniacslk/dublin-traceroute/archive/v0.3.3.tar.gz"
+  sha256 "1359d65d030ae1bac269f43b97a727a6facab7f56eedf00bff480f5bc384082e"
   head "https://github.com/insomniacslk/dublin-traceroute.git"
 
   depends_on "cmake" => :build
