@@ -15,7 +15,7 @@
 
 #include <dublintraceroute/dublin_traceroute.h>
 
-const char *shortopts = "hvs:d:n:t:T:b";
+const char *shortopts = "hvs:d:n:t:T:D:b";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -24,6 +24,7 @@ const struct option longopts[] = {
 	{"npaths", required_argument, NULL, 'n'},
 	{"min-ttl", required_argument, NULL, 't'},
 	{"max-ttl", required_argument, NULL, 'T'},
+	{"delay", required_argument, NULL, 'D'},
 	{"broken-nat", no_argument, NULL, 'b'},
 	{NULL, 0, NULL, 0},
 };
@@ -39,6 +40,7 @@ Usage:
                              [--npaths=num_paths]
                              [--min-ttl=min_ttl]
                              [--max-ttl=max_ttl]
+                             [--delay=delay_in_ms]
                              [--broken-nat]
                              [--help]
                              [--version]
@@ -51,6 +53,7 @@ Options:
   -n NPATHS --npaths=NPATHS     the number of paths to probe
   -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe
   -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL
+  -D DELAY --delay=DELAY        the inter-packet delay
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 
@@ -69,6 +72,7 @@ main(int argc, char **argv) {
 	long	npaths = DublinTraceroute::default_npaths;
 	long	min_ttl = DublinTraceroute::default_min_ttl;
 	long	max_ttl = DublinTraceroute::default_max_ttl;
+	long	delay = DublinTraceroute::default_delay;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 
 	if (geteuid() == 0) {
@@ -110,6 +114,9 @@ main(int argc, char **argv) {
 				break;
 			case 'T':
 				TO_LONG(max_ttl, optarg);
+				break;
+			case 'D':
+				TO_LONG(delay, optarg);
 				break;
 			case 'b':
 				broken_nat = true;
@@ -159,6 +166,10 @@ main(int argc, char **argv) {
 		std::cerr << "Destination port + number of paths must not exceed 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
+	if (delay < 0 || delay > 1000) {
+		std::cerr << "The inter-packet delay must be a number between 0 and 1000 milliseconds" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
 
 	std::cout << "Starting dublin-traceroute" << std::endl;
 
@@ -169,6 +180,7 @@ main(int argc, char **argv) {
 			npaths,
 			min_ttl,
 			max_ttl,
+			delay,
 			broken_nat
 	);
 	std::cout
@@ -177,7 +189,9 @@ main(int argc, char **argv) {
 		<< ":" << Dublin.dstport() << "~" << (Dublin.dstport() + npaths - 1)
 		<< " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
 		<< ", min TTL is " << min_ttl
-		<< ", max TTL is " << max_ttl << ")"
+		<< ", max TTL is " << max_ttl
+		<< ", delay is " << delay << " ms"
+		<< ")"
 		<< std::endl;
 
 	std::shared_ptr<TracerouteResults> results;

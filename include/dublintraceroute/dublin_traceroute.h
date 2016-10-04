@@ -47,11 +47,13 @@ private:
 	const uint8_t		 npaths_,
 				 min_ttl_,
 				 max_ttl_;
+	const uint16_t		 delay_;
 	const bool		 broken_nat_;
 	std::mutex		 mutex_tracerouting,
 				 mutex_sniffed_packets;
 	IPv4Address		 my_address;
 	std::vector<std::shared_ptr<Packet>>	 sniffed_packets;
+	const void		 validate_arguments();
 
 public:
 	static const uint16_t	 default_srcport = 12345;
@@ -59,6 +61,7 @@ public:
 	static const uint8_t	 default_npaths = 20;
 	static const uint8_t	 default_min_ttl = 1;
 	static const uint8_t	 default_max_ttl = 30;
+	static const uint16_t	 default_delay = 10;
 	static const bool	 default_broken_nat = false;
 	DublinTraceroute(
 			const std::string &dst,
@@ -67,6 +70,7 @@ public:
 			const uint8_t npaths = default_npaths,
 			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
+			const uint16_t delay = default_delay,
 			const bool broken_nat = default_broken_nat
 			):
 				srcport_(srcport),
@@ -75,8 +79,9 @@ public:
 				npaths_(npaths),
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
+				delay_(delay),
 				broken_nat_(broken_nat)
-	{ }
+	{ validate_arguments(); }
 	DublinTraceroute(
 			const char *dst,
 			const uint16_t srcport = default_srcport,
@@ -84,6 +89,7 @@ public:
 			const uint8_t npaths = default_npaths,
 			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
+			const uint16_t delay = default_delay,
 			const bool broken_nat = default_broken_nat
 		       ):
 				srcport_(srcport),
@@ -92,8 +98,9 @@ public:
 				npaths_(npaths),
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
+				delay_(delay),
 				broken_nat_(broken_nat)
-	{ }
+	{ validate_arguments(); }
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
 		srcport_(source.srcport_),
@@ -102,14 +109,16 @@ public:
 		npaths_(source.npaths_),
 		min_ttl_(source.min_ttl_),
 		max_ttl_(source.max_ttl_),
+		delay_(source.delay_),
 		broken_nat_(source.broken_nat_)
-	{ }
+	{ validate_arguments(); }
 
 	inline const uint16_t srcport() const { return srcport_; }
 	inline const uint16_t dstport() const { return dstport_; }
 	inline const uint8_t npaths() const { return npaths_; }
 	inline const uint8_t min_ttl() const { return min_ttl_; }
 	inline const uint8_t max_ttl() const { return max_ttl_; }
+	inline const uint16_t delay() const { return delay_; }
 	inline const bool broken_nat() const { return broken_nat_; }
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }

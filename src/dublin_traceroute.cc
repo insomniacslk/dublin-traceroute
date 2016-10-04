@@ -34,6 +34,30 @@
 #define SNIFFER_TIMEOUT_MS	5000
 
 
+/** \brief Method that validates the arguments passed at the construction
+ *
+ * This method checks that the arguments passed at the construction are valid
+ * and in the expected range.
+ *
+ * \sa DublinTraceroute
+ *
+ * \return none
+ */
+const void DublinTraceroute::validate_arguments() {
+	// it is not necessary to validate srcport, dstport, npaths and
+	// broken_nat, as they are already constrained by their types.
+	// Similarly for min_ttl and max_ttl, but the latter must be greater or
+	// equal than the former.
+	if (min_ttl_ > max_ttl_) {
+		throw std::invalid_argument(
+			"max-ttl must be greater or equal than min-ttl");
+	}
+	if (delay_ > 1000) {
+		throw std::invalid_argument(
+			"delay must be between 0 and 1000 milliseconds");
+	}
+}
+
 /** \brief Method that generates and returns the packets to send
  *
  * This method generates a map containing the packets to send in order to run a
@@ -190,7 +214,8 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	);
 	std::thread timer_thread(
 		[&]() {
-			std::this_thread::sleep_for(std::chrono::milliseconds(SNIFFER_TIMEOUT_MS));
+			uint32_t sleep_time = SNIFFER_TIMEOUT_MS + (npaths_ * (max_ttl_ - min_ttl_) * delay_);
+			std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 			sniffer->stop_sniff();
 		}
 	);
@@ -219,6 +244,7 @@ void DublinTraceroute::send_all(std::shared_ptr<flow_map_t> flows) {
 
 			sender.send(*packet, iface.name());
 			hop.sent_timestamp(Tins::Timestamp::current_time());
+			std::this_thread::sleep_for(std::chrono::milliseconds(delay()));
 		}
 	}
 }
