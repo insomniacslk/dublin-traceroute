@@ -3,8 +3,8 @@ project (dublin-traceroute)
 
 # TODO sync this with VERSION in include/dublintraceroute/common.h
 set (dublin-traceroute_VERSION_MAJOR_0)
-set (dublin-traceroute_VERSION_MINOR_3)
-set (dublin-traceroute_VERSION_PATCH_3)
+set (dublin-traceroute_VERSION_MINOR_4)
+set (dublin-traceroute_VERSION_PATCH_0)
 
 # ensure that /usr/local is used to find dependencies. This is especially
 # necessary for brew on OSX and for libraries installed manually under
@@ -25,7 +25,7 @@ add_library(dublintraceroute SHARED
 # Set the shared library version
 set_target_properties(dublintraceroute
     PROPERTIES
-      SOVERSION 0.0.1
+      SOVERSION 0.1.0
     )
 
 find_package(PkgConfig)

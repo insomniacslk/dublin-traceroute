@@ -220,7 +220,7 @@ The usage is very simple, and explained in the help message:
 
 ```bash
 $ ./dublin-traceroute --help
-Dublin Traceroute
+Dublin Traceroute v0.3.3
 Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
@@ -229,6 +229,7 @@ Usage:
                              [--npaths=num_paths]
                              [--min-ttl=min_ttl]
                              [--max-ttl=max_ttl]
+                             [--delay=delay_in_ms]
                              [--broken-nat]
                              [--help]
                              [--version]
@@ -239,8 +240,9 @@ Options:
   -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
   -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
   -n NPATHS --npaths=NPATHS     the number of paths to probe
-  -t MIN_TTL --min-ttl=MIN_TTL  the MINIMUM TTL to probe. Must be greater or equal than the minimum TTL
-  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe
+  -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe
+  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL
+  -D DELAY --delay=DELAY        the inter-packet delay
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 

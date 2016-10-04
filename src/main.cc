@@ -31,8 +31,8 @@ const struct option longopts[] = {
 
 static void usage() {
 	std::cout <<
-R"(Dublin Traceroute
-Written by Andrea Barberio - https://insomniac.slackware.it
+"Dublin Traceroute v" VERSION "\n"
+R"(Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
   dublin-traceroute <target> [--sport=SRC_PORT]
