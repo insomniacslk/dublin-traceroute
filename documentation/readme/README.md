@@ -133,12 +133,16 @@ Dublin Traceroute aims to be:
 
 ### From packages
 
-Dublin Traceroute is packaged in Debian and Ubuntu, yet still in the unstable repos. To install it (as root):
+Dublin Traceroute is packaged in Debian and Ubuntu, yet still in the testing repos. To install it (as root):
 
 on Debian:
 
-* enable the `unstable` repository, with something like `echo "deb http://httpredir.debian.org/debian unstable main" > /etc/apt/sources.list.d/debian-unstable.list`
+* enable the `testing` repository, with something like `echo "deb http://httpredir.debian.org/debian testing main" > /etc/apt/sources.list.d/debian-unstable.list`
 * `apt-get install dublin-traceroute`
+
+or alternatively without adding the repository:
+
+`apt-get install dublin-traceroute -t testing`
 
 on Ubuntu:
 
