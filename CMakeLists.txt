@@ -6,6 +6,15 @@ set (dublin-traceroute_VERSION_MAJOR_0)
 set (dublin-traceroute_VERSION_MINOR_4)
 set (dublin-traceroute_VERSION_PATCH_0)
 
+# Enforce compiler version
+message("Compiler: ${CMAKE_CXX_COMPILER_ID} version ${CMAKE_CXX_COMPILER_VERSION}")
+if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9) OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.8))
+    MESSAGE(FATAL_ERROR "Required at least gcc 4.9 or clang 3.8. Found ${CMAKE_CXX_COMPILER_ID} version ${CMAKE_CXX_COMPILER_VERSION}")
+elseif (NOT CMAKE_COMPILER_IS_GNUCC AND NOT CMAKE_COMPILER_IS_CLANG)
+    MESSAGE(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}. You need gcc >=4.9 or clang >=3.8")
+endif()
+
+
 # ensure that /usr/local is used to find dependencies. This is especially
 # necessary for brew on OSX and for libraries installed manually under
 # /usr/local
