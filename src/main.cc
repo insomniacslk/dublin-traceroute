@@ -48,12 +48,12 @@ Usage:
 Options:
   -h --help                     this help
   -v --version                  print the version of Dublin Traceroute
-  -s SRC_PORT --sport=SRC_PORT  the source port to send packets from
-  -d DST_PORT --dport=DST_PORT  the base destination port to send packets to
-  -n NPATHS --npaths=NPATHS     the number of paths to probe
-  -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe
-  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL
-  -D DELAY --delay=DELAY        the inter-packet delay
+  -s SRC_PORT --sport=SRC_PORT  the source port to send packets from (default: )" << DublinTraceroute::default_srcport << R"()
+  -d DST_PORT --dport=DST_PORT  the base destination port to send packets to (default: )" << DublinTraceroute::default_dstport << R"()
+  -n NPATHS --npaths=NPATHS     the number of paths to probe (default: )" << static_cast<int>(DublinTraceroute::default_npaths) << R"()
+  -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe (default: )" << static_cast<int>(DublinTraceroute::default_min_ttl) << R"()
+  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
+  -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
 
 
