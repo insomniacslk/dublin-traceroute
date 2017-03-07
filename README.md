@@ -3,6 +3,8 @@ C++ library and CLI: [![Build Status](https://travis-ci.org/insomniacslk/dublin-
 
 Python module: [![Build Status](https://travis-ci.org/insomniacslk/python-dublin-traceroute.svg?branch=master)](https://travis-ci.org/insomniacslk/python-dublin-traceroute) [![Version](https://img.shields.io/pypi/v/dublintraceroute.svg)](https://pypi.python.org/pypi/dublintraceroute)
 
+Debian package: ![Debian Unstable](https://badges.debian.net/badges/debian/unstable/dublin-traceroute/version.svg)
+
 Dublin Traceroute is a NAT-aware multipath traceroute tool.
 
 And this page is just informational. **You should really read more at https://dublin-traceroute.net** .
