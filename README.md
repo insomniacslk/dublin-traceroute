@@ -1,7 +1,7 @@
-C++ library and CLI: [![Build Status](https://travis-ci.org/insomniacslk/dublin-traceroute.svg?branch=master)](https://travis-ci.org/insomniacslk/dublin-traceroute)
+C++ library and CLI: [![Build Status](https://www.travis-ci.org/insomniacslk/dublin-traceroute.svg?branch=master)](https://www.travis-ci.org/insomniacslk/dublin-traceroute)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/7935/badge.svg)](https://scan.coverity.com/projects/insomniacslk-dublin-traceroute)
 
-Python module: [![Build Status](https://travis-ci.org/insomniacslk/python-dublin-traceroute.svg?branch=master)](https://travis-ci.org/insomniacslk/python-dublin-traceroute) [![Version](https://img.shields.io/pypi/v/dublintraceroute.svg)](https://pypi.python.org/pypi/dublintraceroute)
+Python module: [![Build Status](https://www.travis-ci.org/insomniacslk/python-dublin-traceroute.svg?branch=master)](https://www.travis-ci.org/insomniacslk/python-dublin-traceroute) [![Version](https://img.shields.io/pypi/v/dublintraceroute.svg)](https://pypi.python.org/pypi/dublintraceroute)
 
 Debian package: ![Debian Unstable](https://badges.debian.net/badges/debian/unstable/dublin-traceroute/version.svg)
 
