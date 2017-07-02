@@ -62,8 +62,12 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 	// Try to match the received packet against the sent packets. The flow
 	// is identified by the UDP destination port
 	auto flow_id = inner_udp.dport();
-	// FIXME this can throw std::out_of_range
-	hops_t hops(flows().at(flow_id));
+	hops_t hops;
+	try {
+		hops = flows().at(flow_id);
+	} catch (std::out_of_range) {
+		return nullptr;
+	}
 
 	unsigned int index = 0;
 	for (auto &hop: *hops) {
