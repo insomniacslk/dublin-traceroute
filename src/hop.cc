@@ -18,6 +18,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <iostream>
+#include <iomanip>
 
 #include "dublintraceroute/hop.h"
 #include "dublintraceroute/common.h"
