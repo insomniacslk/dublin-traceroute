@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <iostream>
 #include <unistd.h>
 #include <getopt.h>
 

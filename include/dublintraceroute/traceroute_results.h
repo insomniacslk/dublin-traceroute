@@ -15,6 +15,7 @@
  */
  
 #include <vector>
+#include <iostream>
 
 #include "common.h"
 #include "hop.h"
