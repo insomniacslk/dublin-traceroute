@@ -106,6 +106,43 @@ unsigned int Hop::rtt() {
 	}
 }
 
+/** \brief Method that computes the flow hash of a given packet
+ *
+ * This method computes the flow hash of a packet and returns it. Returns 0 if
+ * no flow hash cannot be computed (e.g. it is not an IP/UDP packet).
+ * This number is only useful for comparison purposes, and does not necessarily
+ * match any network device's micro-flow hash implementation.
+ *
+ * Two packets with the same flow hash will traverse the same path, so you can
+ * use this method to compare them.
+ *
+ * \sa Hop
+ *
+ * \return the packet's flow hash
+ */
+const uint16_t Hop::flowhash() {
+	uint16_t flowhash = 0;
+	IP ip;
+	try {
+		ip = (*sent()).rfind_pdu<IP>();
+	} catch (pdu_not_found) {
+		return 0;
+	}
+	flowhash += ip.tos() + ip.protocol();
+	flowhash += (uint32_t)(ip.src_addr());
+	flowhash += (uint32_t)(ip.dst_addr());
+	UDP udp;
+	try {
+		udp = (*sent()).rfind_pdu<UDP>();
+	} catch (pdu_not_found) {
+		return 0;
+	}
+	flowhash += udp.sport() + udp.dport();
+	if (flowhash == 0)
+		flowhash = 0xffff;
+	return flowhash;
+}
+
 /** \brief Convert the hop to JSON
  *
  * This method converts the hop data to a JSON representation. The
@@ -119,6 +156,9 @@ Json::Value Hop::to_json() {
 	// Serialize the sent packet
 	root["is_last"] = is_last_hop();
 	root["sent"]["timestamp"] = std::to_string(sent_timestamp()->seconds()) + "." + std::to_string(sent_timestamp()->microseconds());
+
+	// flow hash
+	root["flowhash"] = flowhash();
 
 	// IP layer
 	root["sent"]["ip"]["src"] = sent()->src_addr().to_string();

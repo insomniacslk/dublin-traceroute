@@ -50,6 +50,7 @@ public:
 	const bool is_last_hop() const { return last_hop_; }
 	void is_last_hop(bool is_last) { last_hop_ = is_last; }
 	unsigned int rtt();
+	const uint16_t flowhash();
 	operator bool() const { return (bool)received_; }
 	Json::Value to_json();
 };
