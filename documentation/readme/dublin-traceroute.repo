@@ -1,0 +1,6 @@
+[dublintraceroute]
+name=Dublin Traceroute and dependencies
+baseurl=https://dublin-traceroute.net/repo
+enabled=1
+gpgcheck=0
+#gpgkey=

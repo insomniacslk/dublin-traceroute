@@ -149,6 +149,14 @@ on Ubuntu:
 * add the `proposed` repository, following the instructions at https://wiki.ubuntu.com/Testing/EnableProposed
 * `apt-get install dublin-traceroute`
 
+on CentOS 7:
+
+* copy the [dublin-traceroute repository configuration](dublin-traceroute.repo) to `/etc/yum.repos.d/`
+* yum update
+* yum install dublin-traceroute
+
+Sorry, no GPG verification yet, and no CentOS 6 yet :(
+
 ### From source
 
 Independently of the OS, to build dublin-traceroute you need:
