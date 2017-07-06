@@ -13,7 +13,10 @@
  *
  * \sa traceroute_results.cc
  */
- 
+
+#ifndef _TRACEROUTE_RESULTS_H
+#define _TRACEROUTE_RESULTS_H
+
 #include <vector>
 #include <iostream>
 
@@ -37,4 +40,6 @@ public:
 	void compress();
 	std::string to_json();
 };
+
+#endif /* _TRACEROUTE_RESULTS_H */
 
