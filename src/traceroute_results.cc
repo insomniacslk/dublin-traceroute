@@ -71,11 +71,13 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 
 	unsigned int index = 0;
 	for (auto &hop: *hops) {
+		// FIXME catch pdu_not_found
 		auto &sent = hop.sent()->rfind_pdu<IP>();
 		if (!broken_nat_) {
 			if (sent.src_addr() != inner_ip.src_addr())
 				continue;
 		}
+		// FIXME catch pdu_not_found
 		auto &udp = hop.sent()->rfind_pdu<UDP>();
 		/*
 		 * The original paris-traceroute would match the checksum, but
@@ -177,6 +179,9 @@ void TracerouteResults::show(std::ostream &stream) {
 				if (hopnum > 1 && hop.nat_id() != prev_nat_id)
 					stream << " (NAT detected)";
 				prev_nat_id = hop.nat_id();
+
+				// Show the flow hash for the sent packet
+				stream << ", flow hash: " << hop.flowhash();
 
 				stream << std::endl;
 
