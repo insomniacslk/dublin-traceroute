@@ -20,6 +20,7 @@
 #include <tins/utils.h>
 
 #include "dublintraceroute/dublin_traceroute.h"
+#include "dublintraceroute/timeout_sniffer.h"
 
 /*
  * Dublin Traceroute
@@ -31,6 +32,7 @@
  */
 
 
+// time to wait after sending the last packet
 #define SNIFFER_TIMEOUT_MS	5000
 
 
@@ -189,15 +191,17 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	config.set_filter(get_pcap_filter());
 	config.set_promisc_mode(false);
 	config.set_snap_len(65535);
+	config.set_immediate_mode(true);
+	config.set_timeout(SNIFFER_TIMEOUT_MS);
 
-	Sniffer *_sniffer;
+	TimeoutSniffer *_sniffer;
 	try {
-		_sniffer = new Sniffer(NetworkInterface::default_interface().name(), config);
+		_sniffer = new TimeoutSniffer(NetworkInterface::default_interface().name(), config);
 	} catch (std::runtime_error &exc) {
 		mutex_tracerouting.unlock();
 		throw DublinTracerouteFailedException(exc.what());
 	}
-	std::shared_ptr<Sniffer> sniffer(_sniffer);
+	std::shared_ptr<TimeoutSniffer> sniffer(_sniffer);
 
 	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
 
@@ -210,13 +214,8 @@ TracerouteResults &DublinTraceroute::traceroute() {
 
 	// start the sniffing thread
 	std::thread sniffer_thread(
-		[&]() { sniffer->sniff_loop(handler); }
-	);
-	std::thread timer_thread(
 		[&]() {
-			uint32_t sleep_time = SNIFFER_TIMEOUT_MS + (npaths_ * (max_ttl_ - min_ttl_) * delay_);
-			std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-			sniffer->stop_sniff();
+			sniffer->sniff_loop(handler);
 		}
 	);
 
@@ -224,7 +223,6 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	send_all(flows);
 
 	sniffer_thread.join();
-	timer_thread.join();
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);
