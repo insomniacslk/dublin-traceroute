@@ -53,6 +53,7 @@ public:
 	const uint16_t flowhash();
 	operator bool() const { return (bool)received_; }
 	Json::Value to_json();
+	std::string summary();
 };
 
 #endif /* _HOP_H */

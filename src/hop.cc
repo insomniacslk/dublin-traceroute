@@ -87,6 +87,7 @@ uint16_t Hop::nat_id() {
 			"Cannot get NAT ID for unmatched packets"
 		);
 	}
+	// FIXME catch pdu_not_found
 	uint16_t chk1 = sent_->rfind_pdu<UDP>().checksum();
 	IP inner_ip = received_->rfind_pdu<RawPDU>().to<IP>();
 	uint16_t chk2 = inner_ip.rfind_pdu<UDP>().checksum();
@@ -247,5 +248,33 @@ Json::Value Hop::to_json() {
 	}
 
 	return root;
+}
+
+
+std::string Hop::summary() {
+	std::stringstream stream;
+	if (sent() == nullptr) {
+		return std::string("<incomplete hop>");
+	}
+	IP ip;
+	try {
+		ip = sent()->rfind_pdu<IP>();
+	} catch (pdu_not_found) {
+		return std::string("<incomplete: No IP layer found>");
+	}
+	UDP udp;
+	try {
+		udp = sent()->rfind_pdu<UDP>();
+	} catch (pdu_not_found) {
+		return std::string("<incomplete: No UDP layer found>");
+	}
+	stream
+		<< "UDP "
+		<< ip.src_addr() << ":" << udp.sport()
+		<< " -> "
+		<< ip.dst_addr() << ":" << udp.dport()
+		<< " TTL: " << static_cast<int>(ip.ttl())
+		<< ", Flow hash: " << flowhash();
+	return stream.str();
 }
 
