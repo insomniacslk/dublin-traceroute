@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <tins/utils.h>
+#include <pcap.h>
 
 #include "dublintraceroute/dublin_traceroute.h"
 
@@ -31,7 +32,7 @@
  */
 
 
-#define SNIFFER_TIMEOUT_MS	5000
+#define SNIFFER_TIMEOUT_MS	2000
 
 
 /** \brief Method that validates the arguments passed at the construction
@@ -189,6 +190,8 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	config.set_filter(get_pcap_filter());
 	config.set_promisc_mode(false);
 	config.set_snap_len(65535);
+	config.set_timeout(SNIFFER_TIMEOUT_MS);
+	config.set_pcap_sniffing_method(pcap_dispatch);
 
 	Sniffer *_sniffer;
 	try {
@@ -212,19 +215,10 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	std::thread sniffer_thread(
 		[&]() { sniffer->sniff_loop(handler); }
 	);
-	std::thread timer_thread(
-		[&]() {
-			uint32_t sleep_time = SNIFFER_TIMEOUT_MS + (npaths_ * (max_ttl_ - min_ttl_) * delay_);
-			std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-			sniffer->stop_sniff();
-		}
-	);
-
 	// send everything out
 	send_all(flows);
 
 	sniffer_thread.join();
-	timer_thread.join();
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);
