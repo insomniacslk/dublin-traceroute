@@ -94,6 +94,31 @@ uint16_t Hop::nat_id() {
 	return chk2 - chk1;
 }
 
+
+/** \brief return true if the hop suffers from the zero-ttl forwarding bug
+ *
+ * This method checks that the hop does not suffer of the zero-ttl forwarding
+ * bug, and returns true or false accordingly. This is done by checking the TTL
+ * of the IP-in-ICMP response, i.e. the IP header that was received by the
+ * hop.
+ */
+const bool Hop::zerottl_forwarding_bug() {
+
+	if (!received()) {
+		throw DublinTracerouteException(
+			"Cannot get zero-TTL forwarding information for unmatched packets"
+		);
+	}
+	// FIXME catch pdu_not_found
+	uint16_t chk1 = sent_->rfind_pdu<UDP>().checksum();
+	IP inner_ip = received_->rfind_pdu<RawPDU>().to<IP>();
+	if (inner_ip.ttl() == 0) {
+		// TODO handle the interesting case where TTL is neither 0 or 1
+		return true;
+	}
+	return false;
+}
+
 /** \brief return the RTT in microseconds
  *
  * This method returns the Round-Trip Time in microseconds, if a matching packet
@@ -158,6 +183,8 @@ Json::Value Hop::to_json() {
 
 	// Serialize the sent packet
 	root["is_last"] = is_last_hop();
+	if (received())
+		root["zerottl_forwarding_bug"] = zerottl_forwarding_bug();
 	root["sent"]["timestamp"] = std::to_string(sent_timestamp()->seconds()) + "." + std::to_string(sent_timestamp()->microseconds());
 
 	// flow hash

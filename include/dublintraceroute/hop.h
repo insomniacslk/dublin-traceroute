@@ -43,6 +43,7 @@ public:
 	std::shared_ptr<Tins::Timestamp> sent_timestamp() { return sent_timestamp_; }
 	std::string resolve();
 	uint16_t nat_id();
+	const bool zerottl_forwarding_bug();
 	void sent(IP &packet);
 	void received(IP &packet, const Tins::Timestamp &timestamp);
 	void name(std::string &name);
