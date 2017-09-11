@@ -125,7 +125,6 @@ public:
 	void target(const IPv4Address &addr) { target_ = addr; }
 	std::shared_ptr<flow_map_t> generate_per_flow_packets();
 	void send_all(std::shared_ptr<flow_map_t> flows);
-	std::string get_pcap_filter();
 	TracerouteResults &traceroute();
 
 private:

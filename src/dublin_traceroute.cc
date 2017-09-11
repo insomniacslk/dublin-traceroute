@@ -16,9 +16,14 @@
 #include <chrono>
 #include <functional>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/ethernet.h>
+#include <errno.h>
+
+extern int errno;
 
 #include <tins/utils.h>
-#include <pcap.h>
 
 #include "dublintraceroute/dublin_traceroute.h"
 
@@ -34,6 +39,35 @@
 
 #define SNIFFER_TIMEOUT_MS	2000
 
+
+Tins::Timestamp extract_timestamp_from_msg(struct msghdr &msg) {
+	int level, type;
+	struct cmsghdr *cm;
+	struct timeval *tvp = NULL,
+			tv,
+			now;
+	// if there's no timestamp in the control message, fall back to
+	// gettimeofday, and get it early in this function
+	if (gettimeofday(&now, NULL) == -1) {
+		std::cerr << strerror(errno) << std::endl;
+		return Tins::Timestamp();
+	}
+	for (cm = CMSG_FIRSTHDR(&msg); cm != NULL; cm = CMSG_NXTHDR(&msg, cm))
+	{
+		level = cm->cmsg_level;
+		type  = cm->cmsg_type;
+		if (SOL_SOCKET == level && SO_TIMESTAMP == type) {
+			tvp = (struct timeval *) CMSG_DATA(cm);
+			break;
+		}
+	}
+	if (tvp != NULL) {
+		tv.tv_sec = tvp->tv_sec;
+		tv.tv_usec = tvp->tv_usec;
+		return Tins::Timestamp(tv);
+	}
+	return Tins::Timestamp(now);
+}
 
 /** \brief Method that validates the arguments passed at the construction
  *
@@ -163,12 +197,6 @@ std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
 	return flows;
 }
 
-std::string DublinTraceroute::get_pcap_filter() {
-	std::stringstream filter;
-	filter << "(icmp[icmptype] == 3 and (icmp[icmpcode] == 3 or icmp[icmpcode] == 4)) or (icmp[icmptype] == 11 and icmp[icmpcode] == 0) and dst " << my_address;
-	return filter.str();
-}
-
 /** \brief run the multipath traceroute
  *
  * This method will execute a multipath traceroute. The way it operates is by
@@ -185,25 +213,13 @@ TracerouteResults &DublinTraceroute::traceroute() {
 
 	auto flows = generate_per_flow_packets();
 
-	// configure the sniffer
-	SnifferConfiguration config;
-	config.set_filter(get_pcap_filter());
-	config.set_promisc_mode(false);
-	config.set_snap_len(65535);
-	config.set_timeout(SNIFFER_TIMEOUT_MS);
-	config.set_pcap_sniffing_method(pcap_dispatch);
-
-	Sniffer *_sniffer;
-	try {
-		_sniffer = new Sniffer(NetworkInterface::default_interface().name(), config);
-	} catch (std::runtime_error &exc) {
-		mutex_tracerouting.unlock();
-		throw DublinTracerouteFailedException(exc.what());
-	}
-	std::shared_ptr<Sniffer> sniffer(_sniffer);
-
 	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
 
+	uint16_t num_packets = (max_ttl() - min_ttl() + 1) * npaths();
+	std::chrono::steady_clock::time_point deadline = \
+		std::chrono::steady_clock::now() + \
+		std::chrono::milliseconds(SNIFFER_TIMEOUT_MS) + \
+		std::chrono::milliseconds(delay() * num_packets);
 	// configure the sniffing handler
 	auto handler = std::bind(
 		&DublinTraceroute::sniffer_callback,
@@ -211,14 +227,65 @@ TracerouteResults &DublinTraceroute::traceroute() {
 		std::placeholders::_1
 	);
 
-	// start the sniffing thread
-	std::thread sniffer_thread(
-		[&]() { sniffer->sniff_loop(handler); }
+	// start the ICMP listener
+	std::thread listener_thread(
+		[&]() {
+			int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+			if (sock == -1) {
+				throw std::runtime_error(strerror(errno));
+			}
+			int ts_flag = 1;
+			int ret;
+			if ((ret = setsockopt(sock, SOL_SOCKET, SO_TIMESTAMP, (int *)&ts_flag, sizeof(ts_flag))) == -1) {
+				throw std::runtime_error(strerror(errno));
+			}
+			size_t received;
+			char buf[512];
+			struct msghdr msg;
+			memset(&msg, 0, sizeof(msg));
+			struct iovec iov[1];
+			iov[0].iov_base = buf;
+			iov[0].iov_len = sizeof(buf);
+			msg.msg_iov = iov;
+			msg.msg_iovlen = sizeof(iov) / sizeof(struct iovec);
+			struct csmghdr *cmsg;
+			msg.msg_control = cmsg;
+			msg.msg_controllen = 0;
+			while (std::chrono::steady_clock::now() <= deadline) {
+				received = recvmsg(sock, &msg, MSG_DONTWAIT);
+				if (received == -1) {
+					if (errno != EAGAIN && errno != EWOULDBLOCK) {
+						std::cerr << strerror(errno) << std::endl;
+					}
+				} else if (msg.msg_flags & MSG_TRUNC) {
+					std::cerr << "Warning: received datagram too large for buffer" << std::endl;
+				} else if (received < 20) {
+					std::cerr << "Warning: short read, less than 20 bytes" << std::endl;
+				} else if (buf[0] >> 4 == 4) {
+					// is it IP version 4? Then enqueue it
+					// for processing
+					IP *ip;
+					try {
+						ip = new IP((const uint8_t *)buf, received);
+					} catch (Tins::malformed_packet&) {
+						std::cerr << "Warning: malformed packet" << std::endl;
+						continue;
+					}
+					// Tins::Timestamp is a timeval struct,
+					// so no monotonic clock anyway..
+					auto timestamp = extract_timestamp_from_msg((struct msghdr &)msg);
+					Packet packet = Packet((PDU *)ip, timestamp);
+					handler(packet);
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			}
+			close(sock);
+		}
 	);
 	// send everything out
 	send_all(flows);
 
-	sniffer_thread.join();
+	listener_thread.join();
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);

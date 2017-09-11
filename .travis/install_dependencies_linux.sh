@@ -3,6 +3,7 @@
 # install libtins
 git clone https://github.com/mfontanini/libtins.git
 cd libtins
+git checkout tags/v3.4
 mkdir build
 cd build
 cmake ..
