@@ -1,5 +1,10 @@
 # Dublin Traceroute
 
+### News - Blog
+
+Dublin Traceroute now has a blog! Check it out at
+https://blog.dublin-traceroute.net .
+
 ### What is it?
 
 **Dublin Traceroute is a NAT-aware multipath tracerouting tool**
