@@ -19,6 +19,7 @@ add_library(dublintraceroute SHARED
     src/common.cc
     src/dublin_traceroute.cc
     src/hop.cc
+    src/udpv4probe.cc
     src/traceroute_results.cc
 )
 
