@@ -25,6 +25,8 @@ private:
 	uint16_t local_port_;
 	uint16_t remote_port_;
 	uint8_t ttl_;
+	IP *packet = nullptr;
+
 public:
 	const IPv4Address local_addr() const { return local_addr_; }
 	const IPv4Address remote_addr() const { return remote_addr_; }
@@ -43,6 +45,7 @@ public:
 			local_port_(local_port),
 			ttl_(ttl),
 			local_addr_(local_addr) { };
+	~UDPv4Probe();
 	IP* forge();
 	IP& send();
 };
