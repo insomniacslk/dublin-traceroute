@@ -94,3 +94,33 @@ if (SETCAP_EXECUTABLE)
         endif()"
     )
 endif()
+
+
+# Testing
+INCLUDE(ExternalProject)
+# Only include googletest if the git submodule has been fetched
+IF(EXISTS "${CMAKE_SOURCE_DIR}/googletest/CMakeLists.txt")
+    # Enable tests and add the test directory
+    MESSAGE(STATUS "Tests have been enabled")
+    SET(GOOGLETEST_ROOT ${CMAKE_SOURCE_DIR}/googletest)
+    SET(GOOGLETEST_INCLUDE ${GOOGLETEST_ROOT}/googletest/include)
+    SET(GOOGLETEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest)
+    SET(GOOGLETEST_LIBRARY ${GOOGLETEST_BINARY_DIR}/googletest)
+
+    ExternalProject_Add(
+        googletest
+        DOWNLOAD_COMMAND ""
+        SOURCE_DIR ${GOOGLETEST_ROOT}
+        BINARY_DIR ${GOOGLETEST_BINARY_DIR}
+        CMAKE_CACHE_ARGS "-DBUILD_GTEST:bool=ON" "-DBUILD_GMOCK:bool=OFF"
+                         "-Dgtest_force_shared_crt:bool=ON"
+        INSTALL_COMMAND ""
+    )
+    # Make sure we build googletest before anything else
+    ADD_DEPENDENCIES(dublintraceroute googletest)
+    ENABLE_TESTING()
+    ADD_SUBDIRECTORY(tests)
+ELSE()
+    MESSAGE(STATUS "googletest git submodule is absent. Run `git submodule init && git submodule update` to get it")
+ENDIF()
+
