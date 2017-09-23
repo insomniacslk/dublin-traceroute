@@ -26,7 +26,7 @@
 
 /** \brief method that sends the probe to the specified destination
  */
-IP& UDPv4Probe::send() {
+IP* UDPv4Probe::forge() {
 	/* The payload is used to manipulate the UDP checksum, that will be
 	 * used as hop identifier.
 	 * The last two bytes will be adjusted to influence the hop identifier,
@@ -51,9 +51,12 @@ IP& UDPv4Probe::send() {
 	packet->serialize();
 
 	packet->id(packet->rfind_pdu<UDP>().checksum());
+}
 
+IP &UDPv4Probe::send() {
 	NetworkInterface iface = NetworkInterface::default_interface();
 	PacketSender sender;
+	auto packet = forge();
 	sender.send(*packet, iface.name());
 	return *packet;
 }

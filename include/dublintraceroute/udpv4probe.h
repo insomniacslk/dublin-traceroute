@@ -43,6 +43,7 @@ public:
 			local_port_(local_port),
 			ttl_(ttl),
 			local_addr_(local_addr) { };
+	IP* forge();
 	IP& send();
 };
 
