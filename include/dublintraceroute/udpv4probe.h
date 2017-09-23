@@ -10,7 +10,7 @@
  * \sa udpv4probe.cc
  */
 
- #ifndef _UDPV4PROBE_H
+#ifndef _UDPV4PROBE_H
 #define _UDPV4PROBE_H
 
 #include <tins/tins.h>
@@ -30,6 +30,7 @@ public:
 	const IPv4Address remote_addr() const { return remote_addr_; }
 	const uint16_t local_port() const { return local_port_; };
 	const uint16_t remote_port() const { return remote_port_; };
+	const uint8_t ttl() const { return ttl_; };
 
 	UDPv4Probe(
 		IPv4Address remote_addr,
