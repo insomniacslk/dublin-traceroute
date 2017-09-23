@@ -51,13 +51,21 @@ IP* UDPv4Probe::forge() {
 	packet->serialize();
 
 	packet->id(packet->rfind_pdu<UDP>().checksum());
+	return packet;
 }
 
 IP &UDPv4Probe::send() {
 	NetworkInterface iface = NetworkInterface::default_interface();
 	PacketSender sender;
-	auto packet = forge();
+	if (packet == nullptr) {
+		packet = forge();
+	}
 	sender.send(*packet, iface.name());
 	return *packet;
+}
+
+UDPv4Probe::~UDPv4Probe() {
+	if (packet != nullptr)
+		delete packet;
 }
 
