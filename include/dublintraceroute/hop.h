@@ -32,13 +32,13 @@ private:
 	std::shared_ptr<IP> received_;
 	std::shared_ptr<Timestamp> sent_timestamp_;
 	std::shared_ptr<Timestamp> received_timestamp_;
-	std::shared_ptr<std::string> name_;
+	std::string name_ = "";
 	bool last_hop_;
 public:
 	Hop(): last_hop_(false) { }
 	std::shared_ptr<IP> sent() { return sent_; }
 	std::shared_ptr<IP> received() { return received_; }
-	std::shared_ptr<std::string> name() { if (!name_) name_ = std::make_shared<std::string>(resolve()); return name_; }
+	std::string name() { if (name_.empty()) name_ = resolve(); return name_; }
 	std::shared_ptr<Tins::Timestamp> received_timestamp() { return received_timestamp_; }
 	std::shared_ptr<Tins::Timestamp> sent_timestamp() { return sent_timestamp_; }
 	std::string resolve();

@@ -42,7 +42,7 @@ void Hop::sent_timestamp(const Tins::Timestamp &timestamp) {
 /** \brief setter for the host name of the responding IP
  */
 void Hop::name(std::string &name) {
-	name_ = std::make_shared<std::string>(name);
+	name_ = name;
 }
 
 std::string Hop::resolve() {
@@ -62,7 +62,7 @@ std::string Hop::resolve() {
 		name = std::string(host);
 	else
 		name = received()->src_addr().to_string();
-	name_ = std::make_shared<std::string>(name);
+	name_ = name;
 
 	return name;
 }
@@ -267,7 +267,7 @@ Json::Value Hop::to_json() {
 	}
 
 	// set the DNS name
-	root["name"] = std::string(*name());
+	root["name"] = name();
 
 	try {
 		root["nat_id"] = nat_id();

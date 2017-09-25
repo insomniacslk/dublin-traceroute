@@ -26,6 +26,7 @@ extern int errno;
 #include <tins/utils.h>
 
 #include "dublintraceroute/dublin_traceroute.h"
+#include "dublintraceroute/udpv4probe.h"
 
 /*
  * Dublin Traceroute
@@ -93,109 +94,6 @@ const void DublinTraceroute::validate_arguments() {
 	}
 }
 
-/** \brief Method that generates and returns the packets to send
- *
- * This method generates a map containing the packets to send in order to run a
- * multipath traceroute. The packets are grouped by flow, each identified by a
- * destination port. Each flow specifies a vector of IP packets, and its
- * position determines the TTL used for the packet. E.g. the packet at position
- * 0 has TTL 1, and so on.
- * The number of flows is determined by npaths(), which is passed to the
- * constructor.
- *
- * \sa traceroute()
- * \sa npaths()
- *
- * \return the packets to send
- */
-std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
-	NetworkInterface iface = NetworkInterface::default_interface();
-	NetworkInterface::Info info = iface.addresses();
-	std::shared_ptr<flow_map_t> flows(new flow_map_t);
-
-	/* The payload is used to manipulate the UDP checksum, that will be
-	 * used as hop identifier.
-	 * The last two bytes will be adjusted to influence the hop identifier,
-	 * which for UDP traceroutes is the UDP checksum.
-	 */
-	unsigned char payload[] = {'N', 'S', 'M', 'N', 'C', 0x00, 0x00};
-
-	// Resolve the target host
-	// TODO support IPv6
-	try {
-		target(Utils::resolve_domain(dst()));
-	} catch (std::runtime_error) {
-		target(IPv4Address(dst()));
-	}
-
-	// check for valid min and max TTL
-	if (min_ttl_ > max_ttl_) {
-		throw std::invalid_argument("max_ttl must be greater or equal than min_ttl");
-	}
-
-	// forge the packets to send
-	for (uint16_t dport = dstport(); dport < dstport() + npaths(); dport++) {
-		hops_t hops(new std::vector<Hop>());
-		flows->insert(std::make_pair(dport, hops));
-		/* Forge the packets to send and append them to the packets
-		 * vector.
-		 * To force a packet through the same network flow, it has to
-		 * maintain several constant fields that will be used for the
-		 * ECMP hashing. These fields are, in the case of IP+UDP:
-		 *
-		 *   IPv4.tos
-		 *   IPv4.proto
-		 *   IPv4.src
-		 *   IPv4.dst
-		 *   UDP.sport
-		 *   UDP.dport
-		 */
-		for (uint8_t ttl = min_ttl_; ttl <= max_ttl_; ttl++) {
-			/*
-		 	 * Adjust the payload for each flow to obtain the same UDP
-		 	 * checksum. The UDP checksum is used to identify the flow.
-		 	 */
-			uint16_t identifier = dport + ttl;
-			payload[5] = ((unsigned char *)&identifier)[0];
-			payload[6] = ((unsigned char *)&identifier)[1];
-
-			IP packet = IP(target(), info.ip_addr) /
-				UDP(dport, srcport()) /
-				RawPDU((char *)payload);
-			packet.ttl(ttl);
-			packet.flags(IP::DONT_FRAGMENT); // set DF bit
-
-			// serialize the packet so that we can extract src IP
-			// and checksum
-			packet.serialize();
-
-			// get our own IPv4 address - will be used by the sniffer thread to
-			// sniff only the relevant traffic
-			if (my_address == "0.0.0.0")
-				my_address = IPv4Address(packet.src_addr());
-			else {
-				if (packet.src_addr() != my_address) {
-					std::stringstream ss;
-					ss << "Packets flowing through more than one interface, " << my_address << " and " << packet.src_addr();
-					throw DublinTracerouteException(ss.str());
-				}
-			}
-			packet.id(packet.rfind_pdu<UDP>().checksum());
-
-			try {
-				Hop hop;
-				hop.sent(packet);
-				hops->push_back(hop);
-			} catch (std::runtime_error e) {
-				std::stringstream ss;
-				ss << "Cannot find flow: " << dport << ": " << e.what();
-				throw DublinTracerouteException(ss.str());
-			}
-		}
-	}
-
-	return flows;
-}
 
 /** \brief run the multipath traceroute
  *
@@ -206,14 +104,19 @@ std::shared_ptr<flow_map_t> DublinTraceroute::generate_per_flow_packets() {
  * \sa TracerouteResults
  * \returns an instance of TracerouteResults
  */
-TracerouteResults &DublinTraceroute::traceroute() {
+TracerouteResults& DublinTraceroute::traceroute() {
 	// avoid running multiple traceroutes
 	if (mutex_tracerouting.try_lock() == false)
 		throw DublinTracerouteInProgressException("Traceroute already in progress");
 
-	auto flows = generate_per_flow_packets();
+	validate_arguments();
 
-	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
+	// Resolve the target host
+	try {
+		target(Utils::resolve_domain(dst()));
+	} catch (std::runtime_error) {
+		target(IPv4Address(dst()));
+	}
 
 	uint16_t num_packets = (max_ttl() - min_ttl() + 1) * npaths();
 	std::chrono::steady_clock::time_point deadline = \
@@ -282,10 +185,52 @@ TracerouteResults &DublinTraceroute::traceroute() {
 			close(sock);
 		}
 	);
-	// send everything out
-	send_all(flows);
+
+	std::shared_ptr<flow_map_t> flows(new flow_map_t);
+
+	// forge the packets to send
+	for (uint16_t dport = dstport(); dport < dstport() + npaths(); dport++) {
+		/* Forge the packets to send and append them to the packets
+		 * vector.
+		 * To force a packet through the same network flow, it has to
+		 * maintain several constant fields that will be used for the
+		 * ECMP hashing. These fields are, in the case of IP+UDP:
+		 *
+		 *   IPv4.tos
+		 *   IPv4.proto
+		 *   IPv4.src
+		 *   IPv4.dst
+		 *   UDP.sport
+		 *   UDP.dport
+		 */
+		hops_t hops(new std::vector<Hop>());
+		flows->insert(std::make_pair(dport, hops));
+		for (uint8_t ttl = min_ttl_; ttl <= max_ttl_; ttl++) {
+			/*
+		 	 * Adjust the payload for each flow to obtain the same UDP
+		 	 * checksum. The UDP checksum is used to identify the flow.
+		 	 */
+			UDPv4Probe probe(target(), dport, srcport(), ttl);
+			auto packet = probe.send();
+			auto now = Tins::Timestamp::current_time();
+
+			try {
+				Hop hop;
+				hop.sent(packet);
+				hop.sent_timestamp(now);
+				hops->push_back(hop);
+			} catch (std::runtime_error e) {
+				std::stringstream ss;
+				ss << "Cannot find flow: " << dport << ": " << e.what();
+				throw DublinTracerouteException(ss.str());
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(delay()));
+		}
+	}
 
 	listener_thread.join();
+
+	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);
@@ -293,21 +238,6 @@ TracerouteResults &DublinTraceroute::traceroute() {
 	mutex_tracerouting.unlock();
 
 	return *results;
-}
-
-void DublinTraceroute::send_all(std::shared_ptr<flow_map_t> flows) {
-	NetworkInterface iface = NetworkInterface::default_interface();
-	PacketSender sender;
-	for (auto &iter: *flows) {
-		auto packets = iter.second;
-		for (auto &hop: *packets) {
-			auto packet = hop.sent();
-
-			sender.send(*packet, iface.name());
-			hop.sent_timestamp(Tins::Timestamp::current_time());
-			std::this_thread::sleep_for(std::chrono::milliseconds(delay()));
-		}
-	}
 }
 
 
