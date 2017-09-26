@@ -123,8 +123,6 @@ public:
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
 	void target(const IPv4Address &addr) { target_ = addr; }
-	std::shared_ptr<flow_map_t> generate_per_flow_packets();
-	void send_all(std::shared_ptr<flow_map_t> flows);
 	TracerouteResults &traceroute();
 
 private:
