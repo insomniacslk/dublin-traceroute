@@ -7,7 +7,9 @@ before_script:
   - cd build
   - cmake ..
 
-script: make VERBOSE=1
+script:
+  - make VERBOSE=1
+  - make tests && make test
 
 after_script:
   - ./dublin-traceroute
