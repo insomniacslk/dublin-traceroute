@@ -12,8 +12,8 @@
  *
  * \sa hop.cc
  */
- 
- #ifndef _HOP_H
+
+#ifndef _HOP_H
 #define _HOP_H
 
 #include <future>
