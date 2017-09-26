@@ -26,6 +26,7 @@ extern int errno;
 #include <tins/utils.h>
 
 #include "dublintraceroute/dublin_traceroute.h"
+#include "dublintraceroute/hops.h"
 #include "dublintraceroute/udpv4probe.h"
 
 /*
@@ -203,8 +204,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 		 *   UDP.sport
 		 *   UDP.dport
 		 */
-		hops_t hops(new std::vector<Hop>());
-		flows->insert(std::make_pair(dport, hops));
+		Hops hops;
 		for (uint8_t ttl = min_ttl_; ttl <= max_ttl_; ttl++) {
 			/*
 		 	 * Adjust the payload for each flow to obtain the same UDP
@@ -218,7 +218,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 				Hop hop;
 				hop.sent(packet);
 				hop.sent_timestamp(now);
-				hops->push_back(hop);
+				hops.push_back(hop);
 			} catch (std::runtime_error e) {
 				std::stringstream ss;
 				ss << "Cannot find flow: " << dport << ": " << e.what();
@@ -226,6 +226,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(delay()));
 		}
+		flows->insert(std::make_pair(dport, std::make_shared<Hops>(hops)));
 	}
 
 	listener_thread.join();

@@ -23,7 +23,7 @@
 #include <tins/tins.h>
 #include <json/json.h>
 
-#include "hop.h"
+#include "hops.h"
 
 
 /* Define/undefine USE_IP_ID_MATCHING to enable the IP ID packet matching, that
@@ -38,8 +38,7 @@ using namespace Tins;
 
 typedef uint16_t flow_id_t;
 typedef std::vector<Hop> hops_internal_t;
-typedef std::shared_ptr<hops_internal_t> hops_t;
-typedef std::map<flow_id_t, hops_t> flow_map_t;
+typedef std::map<flow_id_t, std::shared_ptr<Hops>> flow_map_t;
 
 void setupLogging();
 void shutDownLogging();

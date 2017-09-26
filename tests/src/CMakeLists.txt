@@ -24,13 +24,16 @@ LINK_LIBRARIES(
 ADD_CUSTOM_TARGET(
     tests DEPENDS
     UDPv4Test
+    HopsTest
     ${OPTIONAL_TEST_TARGETS}
 )
 
 # Test executables
 
 ADD_EXECUTABLE(UDPv4Test EXCLUDE_FROM_ALL udpv4.cxx)
+ADD_EXECUTABLE(HopsTest EXCLUDE_FROM_ALL hops.cxx)
 
 # Tests
 
 ADD_TEST(UDPv4 UDPv4Test)
+ADD_TEST(Hops HopsTest)
