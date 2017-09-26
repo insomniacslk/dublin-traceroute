@@ -45,12 +45,11 @@ TEST_F(UDPv4Test, TestUDPv4PacketForgingDefaultLocalAddr) {
 	UDPv4Probe p = UDPv4Probe(IPv4Address("8.8.8.8"), 33434, 12345, 64);
 	IP* ip = p.forge();
 	ASSERT_EQ(ip->tos(), 0);
-	ASSERT_EQ(ip->id(), 36162);
 	ASSERT_EQ(ip->flags(), Tins::IP::Flags::DONT_FRAGMENT);
 	ASSERT_EQ(ip->ttl(), 64);
 	ASSERT_EQ(ip->dst_addr().to_string(), std::string("8.8.8.8"));
-	// not testing src_addr because in this test it depends on the actual
-	// network interface's outgoing address for the destination
+	// not testing src_addr and IP ID because the default addr depends on
+	// the actual network interface's configuration
 	delete ip;
 }
 
