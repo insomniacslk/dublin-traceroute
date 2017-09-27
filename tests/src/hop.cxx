@@ -49,7 +49,23 @@ TEST_F(HopTest, TestHopSentPacketIPUDP) {
 	ASSERT_EQ(h.flowhash(), 47835);
 }
 
-// TODO test received packet, resolver, summary and JSON representation
+TEST_F(HopTest, TestHopReceivedPacketIPOnly) {
+	Hop h = Hop();
+	IP ip = IP("8.8.8.8", "0.0.0.0");
+	auto now = Tins::Timestamp::current_time();
+	h.sent_timestamp(now);
+
+	struct timeval tv;
+	tv.tv_sec = now.seconds() + 2;
+	tv.tv_usec = now.microseconds();
+	auto then = Tins::Timestamp(tv);
+	h.received(ip, then);
+	ASSERT_THROW(h.nat_id(), Tins::pdu_not_found);
+	ASSERT_THROW(h.zerottl_forwarding_bug(), Tins::pdu_not_found);
+	ASSERT_EQ(h.rtt(), 2000000);
+}
+
+// TODO test resolver, summary and JSON representation
 
 }
 
