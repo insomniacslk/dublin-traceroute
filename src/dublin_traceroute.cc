@@ -245,7 +245,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 
 bool DublinTraceroute::sniffer_callback(Packet &packet) {
 	std::lock_guard<std::mutex> lock(mutex_sniffed_packets);
-	sniffed_packets.push_back(std::make_shared<Packet>(Packet(packet)));
+	sniffed_packets.push_back(std::make_shared<Packet>(packet));
 	return true;
 }
 
