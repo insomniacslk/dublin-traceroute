@@ -197,7 +197,7 @@ main(int argc, char **argv) {
 
 	std::shared_ptr<TracerouteResults> results;
 	try {
-		results = std::make_shared<TracerouteResults>(Dublin.traceroute());
+		results = Dublin.traceroute();
 	} catch (DublinTracerouteException &e) {
 		std::cout << "Failed: " << e.what() << std::endl;
 		std::exit(EXIT_FAILURE);

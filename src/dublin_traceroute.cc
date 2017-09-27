@@ -105,7 +105,7 @@ const void DublinTraceroute::validate_arguments() {
  * \sa TracerouteResults
  * \returns an instance of TracerouteResults
  */
-TracerouteResults& DublinTraceroute::traceroute() {
+std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	// avoid running multiple traceroutes
 	if (mutex_tracerouting.try_lock() == false)
 		throw DublinTracerouteInProgressException("Traceroute already in progress");
@@ -239,7 +239,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 
 	mutex_tracerouting.unlock();
 
-	return *results;
+	return std::make_shared<TracerouteResults>(*results);
 }
 
 

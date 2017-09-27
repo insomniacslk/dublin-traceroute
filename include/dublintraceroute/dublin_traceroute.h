@@ -123,7 +123,7 @@ public:
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
 	void target(const IPv4Address &addr) { target_ = addr; }
-	TracerouteResults &traceroute();
+	std::shared_ptr<TracerouteResults> traceroute();
 
 private:
 	bool sniffer_callback(Packet& packet);
