@@ -180,6 +180,7 @@ TracerouteResults& DublinTraceroute::traceroute() {
 					auto timestamp = extract_timestamp_from_msg((struct msghdr &)msg);
 					Packet packet = Packet((PDU *)ip, timestamp);
 					handler(packet);
+					delete ip;
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			}
