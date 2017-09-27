@@ -37,7 +37,6 @@ using namespace Tins;
 #define LOG_DIR		"logs"
 
 typedef uint16_t flow_id_t;
-typedef std::vector<Hop> hops_internal_t;
 typedef std::map<flow_id_t, std::shared_ptr<Hops>> flow_map_t;
 
 void setupLogging();
