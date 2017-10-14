@@ -26,7 +26,7 @@ add_library(dublintraceroute SHARED
 # Set the shared library version
 set_target_properties(dublintraceroute
     PROPERTIES
-      SOVERSION 0.1.0
+      SOVERSION 0.1.1
     )
 
 find_package(PkgConfig)
