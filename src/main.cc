@@ -16,7 +16,10 @@
 
 #include <dublintraceroute/dublin_traceroute.h>
 
-const char *shortopts = "hvs:d:n:t:T:D:b";
+#define DEFAULT_OUTPUT_FILE	"trace.json"
+
+
+const char *shortopts = "hvs:d:n:t:T:D:bo:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -27,6 +30,7 @@ const struct option longopts[] = {
 	{"max-ttl", required_argument, NULL, 'T'},
 	{"delay", required_argument, NULL, 'D'},
 	{"broken-nat", no_argument, NULL, 'b'},
+	{"output-file", required_argument, NULL, 'o'},
 	{NULL, 0, NULL, 0},
 };
 
@@ -43,6 +47,7 @@ Usage:
                              [--max-ttl=max_ttl]
                              [--delay=delay_in_ms]
                              [--broken-nat]
+                             [--output-file=file_name]
                              [--help]
                              [--version]
 
@@ -56,6 +61,7 @@ Options:
   -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
   -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
+  -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
 
 
 See documentation at https://dublin-traceroute.net
@@ -75,6 +81,7 @@ main(int argc, char **argv) {
 	long	max_ttl = DublinTraceroute::default_max_ttl;
 	long	delay = DublinTraceroute::default_delay;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
+	std::string	output_file = DEFAULT_OUTPUT_FILE;
 
 	if (geteuid() == 0) {
 		std::cout
@@ -121,6 +128,9 @@ main(int argc, char **argv) {
 				break;
 			case 'b':
 				broken_nat = true;
+				break;
+			case 'o':
+				output_file.assign(optarg);
 				break;
 			default:
 				std::cerr << "Invalid argument: " << iarg << ". See --help" << std::endl;
@@ -210,12 +220,12 @@ main(int argc, char **argv) {
 
 	// Save as JSON
 	std::ofstream jsonfile;
-	jsonfile.open("trace.json");
+	jsonfile.open(output_file);
 	jsonfile << results->to_json();
 	jsonfile.close();
-	std::cout << "Saved JSON file to trace.json ." << std::endl;
+	std::cout << "Saved JSON file to " << output_file << " ." << std::endl;
 
-	std::cout << "You can convert it to DOT by running python -m dublintraceroute plot trace.json" << std::endl;
+	std::cout << "You can convert it to DOT by running python3 -m dublintraceroute plot " << output_file << std::endl;
 
 	std::exit(EXIT_SUCCESS);
 }
