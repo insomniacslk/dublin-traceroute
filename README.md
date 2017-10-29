@@ -6,9 +6,6 @@ Python module: [![Build Status](https://www.travis-ci.org/insomniacslk/python-du
 Debian packages:
 
 ![Debian Unstable](https://badges.debian.net/badges/debian/unstable/dublin-traceroute/version.svg)
-
-![Debian Testing](https://badges.debian.net/badges/debian/testing/dublin-traceroute/version.svg)
-
 ![Debian Testing](https://badges.debian.net/badges/debian/testing/dublin-traceroute/version.svg)
 
 Dublin Traceroute is a NAT-aware multipath traceroute tool.
