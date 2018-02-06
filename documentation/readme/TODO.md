@@ -12,6 +12,7 @@
 * use RocketFuel's technique to identify different network interfaces on a
   router using IP ID
 * ~~support MPLS, https://tools.ietf.org/html/rfc4950~~, done in https://github.com/insomniacslk/dublin-traceroute/issues/6
+* MPLS reconnaisance techniques, http://www.montefiore.ulg.ac.be/~bdonnet/mpls/
 * break on destination unreachable
 * improve documentation
 * put everything under a namespace
