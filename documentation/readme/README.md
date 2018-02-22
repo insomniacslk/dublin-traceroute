@@ -92,7 +92,7 @@ prefer. The bindings now live in a separate repository, see
 
 **The third is that it supports broken NATs.**
 Dublin Traceroute is able to work with some broken NATs that some hosting providers use
-(e.g. I found that Scaleway does that). Neither paris-traceroute nor regular traceroute
+(~e.g. I found that Scaleway does that~ update: they fixed it, see https://github.com/insomniacslk/dublin-traceroute/issues/28). Neither paris-traceroute nor regular traceroute
 would work with it, but it's not their fault as this is a network misconfiguration. When
 you run a regular traceroute or paris-traceroute through this kind of NAT, you will see
 no response from all the hops located just after these broken NAT boxes.
