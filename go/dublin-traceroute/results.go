@@ -6,10 +6,10 @@ import (
 )
 
 type Probe struct {
-	SrcAddr net.IP `json:"srcaddr"`
-	DstAddr net.IP `json:"dstaddr"`
+	From    net.IP `json:"from"`
 	SrcPort uint16 `json:"srcport"`
 	DstPort uint16 `json:"dstport"`
+	TTL     uint8  `json:"ttl"`
 	NAT     bool   `json:"nat"`
 }
 

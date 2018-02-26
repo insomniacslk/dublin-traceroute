@@ -53,6 +53,11 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
+type probeResponse struct {
+	Addr   net.IPAddr
+	Packet gopacket.Packet
+}
+
 // ForgePackets returns a list of packets that will be sent as probes
 func (d UDPv4) ForgePackets() []gopacket.Packet {
 	packets := make([]gopacket.Packet, 0)
@@ -80,6 +85,8 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 			// forge the payload. The last two bytes will be adjusted to have a
 			// predictable checksum for NAT detection
 			payload := []byte{'N', 'S', 'M', 'N', 'C', 0x00, 0x00}
+			// FIXME the payload fixup is yielding the wrong checksum, this
+			//       impacts the flow ID correctness
 			binary.BigEndian.PutUint16(payload[len(payload)-2:], dstPort+uint16(ttl))
 
 			// serialize once to compute the UDP checksum. Unfortunately
@@ -133,13 +140,13 @@ func (d UDPv4) Send(packets []gopacket.Packet) error {
 
 // ListenFor waits for ICMP packets (ttl-expired or port-unreachable) until the
 // timeout expires
-func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
+func (d UDPv4) ListenFor(howLong time.Duration) ([]probeResponse, error) {
 	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	packets := make([]gopacket.Packet, 0)
+	packets := make([]probeResponse, 0)
 	deadline := time.Now().Add(howLong)
 	for {
 		if deadline.Sub(time.Now()) <= 0 {
@@ -150,7 +157,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
 			// TODO tune data size
 			data := make([]byte, 1024)
 			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-			n, _, err := conn.ReadFrom(data)
+			n, addr, err := conn.ReadFrom(data)
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
 					if nerr.Timeout() {
@@ -160,7 +167,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
 				}
 			}
 			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv4, gopacket.Lazy)
-			packets = append(packets, p)
+			packets = append(packets, probeResponse{Packet: p, Addr: *(addr).(*net.IPAddr)})
 		}
 	}
 	return packets, nil
@@ -168,20 +175,20 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
 
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure.
-func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results {
+func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintraceroute.Results {
 	results := dublintraceroute.Results{
 		Flows: make(map[uint16][]dublintraceroute.Probe),
 	}
 	for _, rp := range received {
-		if len(rp.Layers()) < 2 {
+		if len(rp.Packet.Layers()) < 2 {
 			// we are looking for packets with two layers - ICMP and an UDP payload
 			continue
 		}
-		if rp.Layers()[0].LayerType() != layers.LayerTypeICMPv4 {
+		if rp.Packet.Layers()[0].LayerType() != layers.LayerTypeICMPv4 {
 			// not an ICMP
 			continue
 		}
-		icmp := rp.Layers()[0].(*layers.ICMPv4)
+		icmp := rp.Packet.Layers()[0].(*layers.ICMPv4)
 		if icmp.TypeCode.Type() != layers.ICMPv4TypeTimeExceeded &&
 			!(icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort) {
 			// we want time-exceeded or port-unreachable
@@ -235,12 +242,12 @@ func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results 
 			if innerUDP.Checksum == sentUDP.Checksum {
 				thereIsNAT = true
 			}
-			flowID := sentUDP.Checksum
+			flowID := sentIP.Id
 			probe := dublintraceroute.Probe{
-				SrcAddr: innerIP.SrcIP,
-				DstAddr: innerIP.DstIP,
+				From:    rp.Addr.IP,
 				SrcPort: uint16(innerUDP.SrcPort),
 				DstPort: uint16(innerUDP.DstPort),
+				TTL:     uint8(sentIP.TTL),
 				NAT:     thereIsNAT,
 			}
 			results.Flows[flowID] = append(results.Flows[flowID], probe)
