@@ -106,31 +106,46 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 
 // Send sends all the packets to the target address, respecting the configured
 // inter-packet delay
-func (d UDPv4) Send(packets []gopacket.Packet) error {
+func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probeResponse, error) {
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return err
+		return nil, err
 	}
 	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_HDRINCL, 1); err != nil {
-		return err
+		return nil, err
 	}
 	var daddrBytes [4]byte
 	copy(daddrBytes[:], d.Target.To4())
+
+	// spawn the listener
+	recvErrors := make(chan error)
+	recvChan := make(chan []probeResponse, 1)
+	go func(errch chan error, rc chan []probeResponse) {
+		howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
+		received, err := d.ListenFor(howLong)
+		errch <- err
+		// TODO pass the rp chan to ListenFor and let it feed packets there
+		rc <- received
+	}(recvErrors, recvChan)
+
 	for _, p := range packets {
 		daddr := syscall.SockaddrInet4{
 			Addr: daddrBytes,
 			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
 		}
 		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
-			return err
+			return nil, err
 		}
 		time.Sleep(d.Delay)
 	}
-
-	return nil
+	if err = <-recvErrors; err != nil {
+		return nil, err
+	}
+	received := <-recvChan
+	return received, nil
 }
 
 // ListenFor waits for ICMP packets (ttl-expired or port-unreachable) until the
@@ -256,21 +271,8 @@ func (d UDPv4) Traceroute() (*dublintraceroute.Results, error) {
 		return nil, err
 	}
 	packets := d.ForgePackets()
-	sendErrors := make(chan error)
-	go func(errch chan error) {
-		if err := d.Send(packets); err != nil {
-			errch <- err
-			return
-		}
-		errch <- nil
-	}(sendErrors)
-	// wait enough time for response packets
-	howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
-	received, err := d.ListenFor(howLong)
+	received, err := d.SendReceive(packets)
 	if err != nil {
-		return nil, err
-	}
-	if err = <-sendErrors; err != nil {
 		return nil, err
 	}
 
