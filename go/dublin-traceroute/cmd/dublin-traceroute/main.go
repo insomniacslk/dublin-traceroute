@@ -107,7 +107,7 @@ func init() {
 
 func main() {
 	if os.Geteuid() == 0 {
-		fmt.Println("WARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative")
+		fmt.Fprintf(os.Stderr, "WARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative\n")
 	}
 
 	flag.Parse()
@@ -124,7 +124,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Target: %v\n", target)
+	fmt.Fprintf(os.Stderr, "Target: %v\n", target)
 
 	var dt dublintraceroute.DublinTraceroute
 	if Args.v4 {
