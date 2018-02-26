@@ -3,6 +3,7 @@ package dublintraceroute
 import (
 	"encoding/binary"
 	"errors"
+	"log"
 	"net"
 	"syscall"
 	"time"
@@ -173,8 +174,25 @@ func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results 
 			// we want time-exceeded or port-unreachable
 			continue
 		}
-		// it seems like gopacket's ICMP does not support extensions for MPLS..
-		// TODO match the inner UDP from the ICMP packet with each sent packet
+		// XXX it seems like gopacket's ICMP does not support extensions for MPLS..
+		innerPacket := gopacket.NewPacket(icmp.LayerPayload(), layers.LayerTypeIPv4, gopacket.Default)
+		if len(innerPacket.Layers()) < 2 {
+			// we want the inner packet to have two layers, IP and UDP, i.e.
+			// what we have sent
+			continue
+		}
+		innerIP, ok := innerPacket.Layers()[0].(*layers.IPv4)
+		if !ok {
+			continue
+		}
+		innerUDP, ok := innerPacket.Layers()[1].(*layers.UDP)
+		if !ok {
+			continue
+		}
+		// TODO match innerIP.DstIP with our SrcIP
+		// TODO match innerIP.Id and innerUDP.Checksum for NAT checking
+		// TODO match innerUDP.{Src,Dst}Port with src and dst ports of `sent`
+		log.Print(innerIP, innerUDP)
 	}
 	return dublintraceroute.Results{}
 }
