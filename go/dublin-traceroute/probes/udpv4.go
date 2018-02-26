@@ -35,8 +35,14 @@ func (d *UDPv4) Validate() error {
 	if d.Target.To4() == nil {
 		return errors.New("Invalid IPv4 address")
 	}
+	if d.NumPaths == 0 {
+		return errors.New("Number of paths must be a positive integer")
+	}
 	if d.DstPort+d.NumPaths > 0xffff {
 		return errors.New("Destination port plus number of paths cannot exceed 65535")
+	}
+	if d.MinTTL == 0 {
+		return errors.New("Minimum TTL must be a positive integer")
 	}
 	if d.MaxTTL < d.MinTTL {
 		return errors.New("Invalid maximum TTL, must be greater or equal than minimum TTL")
@@ -50,6 +56,9 @@ func (d *UDPv4) Validate() error {
 // ForgePackets returns a list of packets that will be sent as probes
 func (d UDPv4) ForgePackets() []gopacket.Packet {
 	packets := make([]gopacket.Packet, 0)
+	if d.NumPaths == 0 {
+		return packets
+	}
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{ComputeChecksums: true, FixLengths: true}
 	for ttl := d.MinTTL; ttl <= d.MaxTTL; ttl++ {
@@ -215,15 +224,13 @@ func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results 
 				// packet
 				continue
 			}
-			// TODO check that innerIP.Checksum matches, and if not, that the
-			// innerIP.Id matches, for NAT purposes
-			// TODO match innerIP.Id and innerUDP.Checksum, and that innerIP.SrcIP
-			//      and our source IP are different, for NAT checking
 			if innerIP.Id != sentIP.Id {
 				// the two packets do not belong to the same flow
+				continue
 			}
 			// the two packets belong to the same flow. If the checksum
 			// differ there's a NAT
+			// TODO add NAT ID information to detect multiple NATs
 			var thereIsNAT bool
 			if innerUDP.Checksum == sentUDP.Checksum {
 				thereIsNAT = true
