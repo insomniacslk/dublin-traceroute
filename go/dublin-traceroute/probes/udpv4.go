@@ -160,7 +160,9 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure.
 func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results {
-	matches := make(map[gopacket.Packet][]gopacket.Packet)
+	results := dublintraceroute.Results{
+		Flows: make(map[uint16][]dublintraceroute.Probe),
+	}
 	for _, rp := range received {
 		if len(rp.Layers()) < 2 {
 			// we are looking for packets with two layers - ICMP and an UDP payload
@@ -217,13 +219,27 @@ func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results 
 			// innerIP.Id matches, for NAT purposes
 			// TODO match innerIP.Id and innerUDP.Checksum, and that innerIP.SrcIP
 			//      and our source IP are different, for NAT checking
-			_ = sentIP.Checksum
-			matches[sp] = append(matches[sp], rp)
+			if innerIP.Id != sentIP.Id {
+				// the two packets do not belong to the same flow
+			}
+			// the two packets belong to the same flow. If the checksum
+			// differ there's a NAT
+			var thereIsNAT bool
+			if innerUDP.Checksum == sentUDP.Checksum {
+				thereIsNAT = true
+			}
+			flowID := sentUDP.Checksum
+			probe := dublintraceroute.Probe{
+				SrcAddr: innerIP.SrcIP,
+				DstAddr: innerIP.DstIP,
+				SrcPort: uint16(innerUDP.SrcPort),
+				DstPort: uint16(innerUDP.DstPort),
+				NAT:     thereIsNAT,
+			}
+			results.Flows[flowID] = append(results.Flows[flowID], probe)
 		}
 	}
-	log.Print(matches)
-	log.Printf("Found %v matches", len(matches))
-	return dublintraceroute.Results{}
+	return results
 }
 
 // Traceroute sends the probes and returns a Results structure or an error

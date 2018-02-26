@@ -156,6 +156,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(results)
+	fmt.Println(results.ToJson())
 	// TODO convert results to JSON
 }
