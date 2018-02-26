@@ -1,6 +1,7 @@
 package dublintraceroute
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"log"
@@ -159,6 +160,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]gopacket.Packet, error) {
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure.
 func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results {
+	matches := make(map[gopacket.Packet][]gopacket.Packet)
 	for _, rp := range received {
 		if len(rp.Layers()) < 2 {
 			// we are looking for packets with two layers - ICMP and an UDP payload
@@ -189,11 +191,38 @@ func (d UDPv4) Match(sent, received []gopacket.Packet) dublintraceroute.Results 
 		if !ok {
 			continue
 		}
-		// TODO match innerIP.DstIP with our SrcIP
-		// TODO match innerIP.Id and innerUDP.Checksum for NAT checking
-		// TODO match innerUDP.{Src,Dst}Port with src and dst ports of `sent`
-		log.Print(innerIP, innerUDP)
+		if !bytes.Equal(innerIP.DstIP.To4(), d.Target.To4()) {
+			// the destination is not our target, discard it
+			continue
+		}
+		for _, sp := range sent {
+			sentIP, ok := sp.Layers()[0].(*layers.IPv4)
+			if !ok {
+				// invalid sent packet
+				log.Print("Invalid sent packet, the first layer is not IPv4")
+				continue
+			}
+			sentUDP, ok := sp.Layers()[1].(*layers.UDP)
+			if !ok {
+				// invalid sent packet
+				log.Print("Invalid sent packet, the second layer is not UDP")
+				continue
+			}
+			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
+				// source and destination port do not match - it's not this
+				// packet
+				continue
+			}
+			// TODO check that innerIP.Checksum matches, and if not, that the
+			// innerIP.Id matches, for NAT purposes
+			// TODO match innerIP.Id and innerUDP.Checksum, and that innerIP.SrcIP
+			//      and our source IP are different, for NAT checking
+			_ = sentIP.Checksum
+			matches[sp] = append(matches[sp], rp)
+		}
 	}
+	log.Print(matches)
+	log.Printf("Found %v matches", len(matches))
 	return dublintraceroute.Results{}
 }
 
