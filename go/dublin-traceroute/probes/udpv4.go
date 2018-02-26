@@ -238,17 +238,14 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 			// the two packets belong to the same flow. If the checksum
 			// differ there's a NAT
 			// TODO add NAT ID information to detect multiple NATs
-			var thereIsNAT bool
-			if innerUDP.Checksum == sentUDP.Checksum {
-				thereIsNAT = true
-			}
+			NATID := innerUDP.Checksum
 			flowID := sentIP.Id
 			probe := dublintraceroute.Probe{
 				From:    rp.Addr.IP,
 				SrcPort: uint16(innerUDP.SrcPort),
 				DstPort: uint16(innerUDP.DstPort),
 				TTL:     uint8(sentIP.TTL),
-				NAT:     thereIsNAT,
+				NATID:   NATID,
 			}
 			results.Flows[flowID] = append(results.Flows[flowID], probe)
 		}

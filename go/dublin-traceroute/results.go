@@ -10,7 +10,7 @@ type Probe struct {
 	SrcPort uint16 `json:"srcport"`
 	DstPort uint16 `json:"dstport"`
 	TTL     uint8  `json:"ttl"`
-	NAT     bool   `json:"nat"`
+	NATID   uint16 `json:"nat_id"`
 }
 
 type Results struct {
