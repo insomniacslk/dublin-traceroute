@@ -2,7 +2,6 @@ package dublintraceroute
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"log"
 	"net"
@@ -84,16 +83,12 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 
 			// forge the payload. The last two bytes will be adjusted to have a
 			// predictable checksum for NAT detection
-			payload := []byte{'N', 'S', 'M', 'N', 'C', 0x00, 0x00}
-			// FIXME the payload fixup is yielding the wrong checksum, this
-			//       impacts the flow ID correctness
-			binary.BigEndian.PutUint16(payload[len(payload)-2:], dstPort+uint16(ttl))
+			payload := []byte{'N', 'S', 'M', 'N', 'C'}
+			id := dstPort + uint16(ttl)
+			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
 
-			// serialize once to compute the UDP checksum. Unfortunately
-			// gopacket does not export computeChecksum and I don't want to
-			// reimplement it.
-			// TODO if the performances appear to be impacted by the double
-			// serialization, implement a checksum function
+			// serialize once to compute the UDP checksum, that will be used as
+			// IP ID in order to detect NATs
 			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
 			p := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv4, gopacket.Lazy)
 			// extract the UDP checksum and assign it to the IP ID, will be used
@@ -239,7 +234,9 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 			// differ there's a NAT
 			// TODO add NAT ID information to detect multiple NATs
 			NATID := innerUDP.Checksum
-			flowID := sentIP.Id
+			// TODO this works when the source port is fixed. Allow for variable
+			//      source port too
+			flowID := uint16(sentUDP.DstPort)
 			probe := dublintraceroute.Probe{
 				From:    rp.Addr.IP,
 				SrcPort: uint16(innerUDP.SrcPort),
