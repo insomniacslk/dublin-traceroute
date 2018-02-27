@@ -17,15 +17,21 @@ import (
 
 // UDPv4 is a probe type based on IPv6 and UDP
 type UDPv4 struct {
-	Target    net.IP
-	SrcPort   uint16
-	DstPort   uint16
-	NumPaths  uint16
-	MinTTL    uint8
-	MaxTTL    uint8
-	Delay     time.Duration
-	Timeout   time.Duration
+	Target   net.IP
+	SrcPort  uint16
+	DstPort  uint16
+	NumPaths uint16
+	MinTTL   uint8
+	MaxTTL   uint8
+	Delay    time.Duration
+	Timeout  time.Duration
+	// TODO implement broken nat detection
 	BrokenNAT bool
+}
+
+// TODO implement this function
+func computeFlowhash(gopacket.Packet) (uint16, error) {
+	return 0, nil
 }
 
 // Validate checks that the probe is configured correctly and it is safe to
@@ -189,6 +195,7 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 	results := dublintraceroute.Results{
 		Flows: make(map[uint16][]dublintraceroute.Probe),
 	}
+	// TODO add source node to the results
 	for _, rp := range received {
 		if len(rp.Packet.Layers()) < 2 {
 			// we are looking for packets with two layers - ICMP and an UDP payload
@@ -252,12 +259,43 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
 			flowID := uint16(sentUDP.DstPort)
+			flowhash, err := computeFlowhash(sp)
+			if err != nil {
+				log.Print(err)
+				continue
+			}
 			probe := dublintraceroute.Probe{
-				From:    rp.Addr.IP,
-				SrcPort: uint16(innerUDP.SrcPort),
-				DstPort: uint16(innerUDP.DstPort),
-				TTL:     uint8(sentIP.TTL),
-				NATID:   NATID,
+				Flowhash: flowhash,
+				IsLast:   false, // TODO compute this field
+				Name:     "",    // TODO compute this field
+				NATID:    NATID,
+				RttUsec:  0, // TODO compute this field
+				Sent: dublintraceroute.Packet{
+					Timestamp: time.Unix(0, 0), // TODO compute this field
+					IP: dublintraceroute.IP{
+						// TODO get the computed IP or this will be 0.0.0.0
+						SrcIP: sentIP.SrcIP,
+						DstIP: sentIP.DstIP,
+						TTL:   sentIP.TTL,
+					},
+					UDP: dublintraceroute.UDP{
+						SrcPort: uint16(sentUDP.SrcPort),
+						DstPort: uint16(sentUDP.DstPort),
+					},
+				}, // TODO compute this field
+				Received: dublintraceroute.Packet{
+					Timestamp: time.Unix(0, 0), // TODO compute this field
+					IP: dublintraceroute.IP{
+						SrcIP: innerIP.SrcIP,
+						DstIP: innerIP.DstIP,
+						TTL:   innerIP.TTL,
+					},
+					UDP: dublintraceroute.UDP{
+						SrcPort: uint16(innerUDP.SrcPort),
+						DstPort: uint16(innerUDP.DstPort),
+					},
+				},
+				ZeroTTLForwardingBug: false, // TODO compute this field
 			}
 			results.Flows[flowID] = append(results.Flows[flowID], probe)
 		}
