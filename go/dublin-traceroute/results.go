@@ -23,7 +23,7 @@ type ICMP struct {
 	Code        uint8           `json:"code"`
 	Type        uint8           `json:"type"`
 	Description string          `json:"description"`
-	Extensions  []ICMPExtension `json:"exensions"`
+	Extensions  []ICMPExtension `json:"extensions"`
 	MPLSLabels  []MPLSLabel     `json:"mpls_labels"`
 }
 
