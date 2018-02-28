@@ -37,9 +37,9 @@ func computeFlowhash(p gopacket.Packet) (uint16, error) {
 		p.Layers()[1].LayerType() != layers.LayerTypeUDP {
 		return 0, errors.New("Cannot compute flow hash: required a packet with IP and UDP layers")
 	}
-	var flowhash uint16
 	ip := p.Layers()[0].(*layers.IPv4)
 	udp := p.Layers()[1].(*layers.UDP)
+	var flowhash uint16
 	flowhash += uint16(ip.TOS) + uint16(ip.Protocol)
 	flowhash += binary.BigEndian.Uint16(ip.SrcIP.To4()[:2]) + binary.BigEndian.Uint16(ip.SrcIP.To4()[2:4])
 	flowhash += binary.BigEndian.Uint16(ip.DstIP.To4()[:2]) + binary.BigEndian.Uint16(ip.DstIP.To4()[2:4])
@@ -71,9 +71,15 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
-type probeResponse struct {
-	Addr   net.IPAddr
-	Packet gopacket.Packet
+type Probe struct {
+	Packet    gopacket.Packet
+	Timestamp time.Time
+}
+
+type ProbeResponse struct {
+	Packet    gopacket.Packet
+	Timestamp time.Time
+	Addr      net.IPAddr
 }
 
 // ForgePackets returns a list of packets that will be sent as probes
@@ -123,26 +129,26 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 	return packets
 }
 
-// Send sends all the packets to the target address, respecting the configured
+// SendReceive sends all the packets to the target address, respecting the configured
 // inter-packet delay
-func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probeResponse, error) {
+func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]Probe, []ProbeResponse, error) {
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_HDRINCL, 1); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var daddrBytes [4]byte
 	copy(daddrBytes[:], d.Target.To4())
 
 	// spawn the listener
 	recvErrors := make(chan error)
-	recvChan := make(chan []probeResponse, 1)
-	go func(errch chan error, rc chan []probeResponse) {
+	recvChan := make(chan []ProbeResponse, 1)
+	go func(errch chan error, rc chan []ProbeResponse) {
 		howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
 		received, err := d.ListenFor(howLong)
 		errch <- err
@@ -150,32 +156,34 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probeResponse, error) {
 		rc <- received
 	}(recvErrors, recvChan)
 
+	sent := make([]Probe, 0, len(packets))
 	for _, p := range packets {
 		daddr := syscall.SockaddrInet4{
 			Addr: daddrBytes,
 			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
 		}
 		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		sent = append(sent, Probe{Packet: p, Timestamp: time.Now()})
 		time.Sleep(d.Delay)
 	}
 	if err = <-recvErrors; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	received := <-recvChan
-	return received, nil
+	return sent, received, nil
 }
 
 // ListenFor waits for ICMP packets (ttl-expired or port-unreachable) until the
 // timeout expires
-func (d UDPv4) ListenFor(howLong time.Duration) ([]probeResponse, error) {
+func (d UDPv4) ListenFor(howLong time.Duration) ([]ProbeResponse, error) {
 	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	packets := make([]probeResponse, 0)
+	packets := make([]ProbeResponse, 0)
 	deadline := time.Now().Add(howLong)
 	for {
 		if deadline.Sub(time.Now()) <= 0 {
@@ -187,6 +195,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probeResponse, error) {
 			data := make([]byte, 1024)
 			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
 			n, addr, err := conn.ReadFrom(data)
+			now := time.Now()
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
 					if nerr.Timeout() {
@@ -196,7 +205,11 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probeResponse, error) {
 				}
 			}
 			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv4, gopacket.Lazy)
-			packets = append(packets, probeResponse{Packet: p, Addr: *(addr).(*net.IPAddr)})
+			packets = append(packets, ProbeResponse{
+				Packet:    p,
+				Addr:      *(addr).(*net.IPAddr),
+				Timestamp: now,
+			})
 		}
 	}
 	return packets, nil
@@ -204,7 +217,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probeResponse, error) {
 
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure.
-func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintraceroute.Results {
+func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Results {
 	results := dublintraceroute.Results{
 		Flows: make(map[uint16][]dublintraceroute.Probe),
 	}
@@ -244,13 +257,13 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 			continue
 		}
 		for _, sp := range sent {
-			sentIP, ok := sp.Layers()[0].(*layers.IPv4)
+			sentIP, ok := sp.Packet.Layers()[0].(*layers.IPv4)
 			if !ok {
 				// invalid sent packet
 				log.Print("Invalid sent packet, the first layer is not IPv4")
 				continue
 			}
-			sentUDP, ok := sp.Layers()[1].(*layers.UDP)
+			sentUDP, ok := sp.Packet.Layers()[1].(*layers.UDP)
 			if !ok {
 				// invalid sent packet
 				log.Print("Invalid sent packet, the second layer is not UDP")
@@ -272,7 +285,7 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
 			flowID := uint16(sentUDP.DstPort)
-			flowhash, err := computeFlowhash(sp)
+			flowhash, err := computeFlowhash(sp.Packet)
 			if err != nil {
 				log.Print(err)
 				continue
@@ -289,9 +302,9 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 				IsLast:   false, // TODO compute this field
 				Name:     "",    // TODO compute this field
 				NATID:    NATID,
-				RttUsec:  0, // TODO compute this field
+				RttUsec:  uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000,
 				Sent: dublintraceroute.Packet{
-					Timestamp: time.Unix(0, 0), // TODO compute this field
+					Timestamp: sp.Timestamp,
 					IP: dublintraceroute.IP{
 						// TODO get the computed IP or this will be 0.0.0.0
 						SrcIP: sentIP.SrcIP,
@@ -304,7 +317,7 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 					},
 				},
 				Received: dublintraceroute.Packet{
-					Timestamp: time.Unix(0, 0), // TODO compute this field
+					Timestamp: rp.Timestamp,
 					ICMP: dublintraceroute.ICMP{
 						Type:        icmp.TypeCode.Type(),
 						Code:        icmp.TypeCode.Code(),
@@ -334,12 +347,12 @@ func (d UDPv4) Traceroute() (*dublintraceroute.Results, error) {
 		return nil, err
 	}
 	packets := d.ForgePackets()
-	received, err := d.SendReceive(packets)
+	sent, received, err := d.SendReceive(packets)
 	if err != nil {
 		return nil, err
 	}
 
-	results := d.Match(packets, received)
+	results := d.Match(sent, received)
 
 	return &results, nil
 }
