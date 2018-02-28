@@ -2,6 +2,7 @@ package dublintraceroute
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"log"
 	"net"
@@ -30,8 +31,20 @@ type UDPv4 struct {
 }
 
 // TODO implement this function
-func computeFlowhash(gopacket.Packet) (uint16, error) {
-	return 0, nil
+func computeFlowhash(p gopacket.Packet) (uint16, error) {
+	if len(p.Layers()) < 2 ||
+		p.Layers()[0].LayerType() != layers.LayerTypeIPv4 ||
+		p.Layers()[1].LayerType() != layers.LayerTypeUDP {
+		return 0, errors.New("Cannot compute flow hash: required a packet with IP and UDP layers")
+	}
+	var flowhash uint16
+	ip := p.Layers()[0].(*layers.IPv4)
+	udp := p.Layers()[1].(*layers.UDP)
+	flowhash += uint16(ip.TOS) + uint16(ip.Protocol)
+	flowhash += binary.BigEndian.Uint16(ip.SrcIP.To4()[:2]) + binary.BigEndian.Uint16(ip.SrcIP.To4()[2:4])
+	flowhash += binary.BigEndian.Uint16(ip.DstIP.To4()[:2]) + binary.BigEndian.Uint16(ip.DstIP.To4()[2:4])
+	flowhash += uint16(udp.SrcPort) + uint16(udp.DstPort)
+	return flowhash, nil
 }
 
 // Validate checks that the probe is configured correctly and it is safe to
