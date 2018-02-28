@@ -289,7 +289,7 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 						SrcPort: uint16(sentUDP.SrcPort),
 						DstPort: uint16(sentUDP.DstPort),
 					},
-				}, // TODO compute this field
+				},
 				Received: dublintraceroute.Packet{
 					Timestamp: time.Unix(0, 0), // TODO compute this field
 					ICMP: dublintraceroute.ICMP{
@@ -307,7 +307,7 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 						DstPort: uint16(innerUDP.DstPort),
 					},
 				},
-				ZeroTTLForwardingBug: false, // TODO compute this field
+				ZeroTTLForwardingBug: innerIP.TTL == 0,
 			}
 			results.Flows[flowID] = append(results.Flows[flowID], probe)
 		}
