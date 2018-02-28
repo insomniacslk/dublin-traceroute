@@ -264,6 +264,13 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 				log.Print(err)
 				continue
 			}
+			// gopacket does not export the fields with descriptions :(
+			description := "Unknown"
+			if icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort {
+				description = "Destination port unreachable"
+			} else if icmp.TypeCode.Type() == layers.ICMPv4TypeTimeExceeded && icmp.TypeCode.Code() == layers.ICMPv4CodeTTLExceeded {
+				description = "TTL expired in transit"
+			}
 			probe := dublintraceroute.Probe{
 				Flowhash: flowhash,
 				IsLast:   false, // TODO compute this field
@@ -285,6 +292,11 @@ func (d UDPv4) Match(sent []gopacket.Packet, received []probeResponse) dublintra
 				}, // TODO compute this field
 				Received: dublintraceroute.Packet{
 					Timestamp: time.Unix(0, 0), // TODO compute this field
+					ICMP: dublintraceroute.ICMP{
+						Type:        icmp.TypeCode.Type(),
+						Code:        icmp.TypeCode.Code(),
+						Description: description,
+					},
 					IP: dublintraceroute.IP{
 						SrcIP: innerIP.SrcIP,
 						DstIP: innerIP.DstIP,
