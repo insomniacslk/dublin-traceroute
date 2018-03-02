@@ -11,9 +11,8 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
 	"golang.org/x/net/icmp"
-
-	dublintraceroute ".."
 )
 
 // UDPv4 is a probe type based on IPv6 and UDP

@@ -7,9 +7,9 @@ import (
 	"net"
 	"time"
 
-	dublintraceroute ".."
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
 )
 
 // UDPv6 is a probe type based on IPv6 and UDP
