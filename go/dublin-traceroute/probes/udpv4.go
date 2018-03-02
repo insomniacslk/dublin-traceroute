@@ -280,7 +280,6 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			}
 			// the two packets belong to the same flow. If the checksum
 			// differ there's a NAT
-			// TODO add NAT ID information to detect multiple NATs
 			NATID := innerUDP.Checksum - sentUDP.Checksum
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
@@ -299,8 +298,8 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			}
 			probe := dublintraceroute.Probe{
 				Flowhash: flowhash,
-				IsLast:   false, // TODO compute this field
-				Name:     "",    // TODO compute this field
+				IsLast:   bytes.Equal(rp.Addr.IP, d.Target),
+				Name:     rp.Addr.IP.String(), // TODO compute this field
 				NATID:    NATID,
 				RttUsec:  uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000,
 				Sent: dublintraceroute.Packet{
