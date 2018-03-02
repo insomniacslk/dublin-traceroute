@@ -11,6 +11,7 @@ import (
 type IP struct {
 	SrcIP net.IP `json:"src"`
 	DstIP net.IP `json:"dst"`
+	ID    uint16 `json:"id"`
 	TTL   uint8  `json:"ttl"`
 }
 
@@ -61,10 +62,28 @@ type Probe struct {
 }
 
 type Results struct {
-	Flows map[uint16][]Probe `json:"flows"`
+	Flows      map[uint16][]Probe `json:"flows"`
+	compressed bool
 }
 
-func (r *Results) ToJson() string {
+func (r Results) compress() {
+	for k, v := range r.Flows {
+		for idx, e := range v {
+			if e.IsLast {
+				v = v[:idx]
+				r.Flows[k] = v
+			}
+		}
+	}
+	r.compressed = true
+}
+
+func (r *Results) ToJson(compress bool) string {
+	if compress {
+		if !r.compressed {
+			r.compress()
+		}
+	}
 	b, err := json.Marshal(r)
 	if err != nil {
 		return ""

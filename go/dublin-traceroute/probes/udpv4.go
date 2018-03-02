@@ -74,12 +74,13 @@ func (d *UDPv4) Validate() error {
 type Probe struct {
 	Packet    gopacket.Packet
 	Timestamp time.Time
+	LocalAddr net.IP
 }
 
 type ProbeResponse struct {
 	Packet    gopacket.Packet
 	Timestamp time.Time
-	Addr      net.IPAddr
+	Addr      net.IP
 }
 
 // ForgePackets returns a list of packets that will be sent as probes
@@ -156,6 +157,13 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]Probe, []ProbeResponse,
 		rc <- received
 	}(recvErrors, recvChan)
 
+	// ugly porkaround until I find how to get the local address in a better way
+	conn, err := net.Dial("udp4", net.JoinHostPort(d.Target.String(), "0"))
+	if err != nil {
+		return nil, nil, err
+	}
+	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
+	conn.Close()
 	sent := make([]Probe, 0, len(packets))
 	for _, p := range packets {
 		daddr := syscall.SockaddrInet4{
@@ -165,7 +173,7 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]Probe, []ProbeResponse,
 		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
 			return nil, nil, err
 		}
-		sent = append(sent, Probe{Packet: p, Timestamp: time.Now()})
+		sent = append(sent, Probe{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
 		time.Sleep(d.Delay)
 	}
 	if err = <-recvErrors; err != nil {
@@ -207,7 +215,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]ProbeResponse, error) {
 			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv4, gopacket.Lazy)
 			packets = append(packets, ProbeResponse{
 				Packet:    p,
-				Addr:      *(addr).(*net.IPAddr),
+				Addr:      (*(addr).(*net.IPAddr)).IP,
 				Timestamp: now,
 			})
 		}
@@ -298,15 +306,14 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			}
 			probe := dublintraceroute.Probe{
 				Flowhash: flowhash,
-				IsLast:   bytes.Equal(rp.Addr.IP, d.Target),
-				Name:     rp.Addr.IP.String(), // TODO compute this field
+				IsLast:   bytes.Equal(rp.Addr.To4(), d.Target.To4()),
+				Name:     rp.Addr.String(), // TODO compute this field
 				NATID:    NATID,
 				RttUsec:  uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000,
 				Sent: dublintraceroute.Packet{
 					Timestamp: sp.Timestamp,
 					IP: dublintraceroute.IP{
-						// TODO get the computed IP or this will be 0.0.0.0
-						SrcIP: sentIP.SrcIP,
+						SrcIP: sp.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP,
 						DstIP: sentIP.DstIP,
 						TTL:   sentIP.TTL,
 					},
@@ -323,9 +330,8 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 						Description: description,
 					},
 					IP: dublintraceroute.IP{
-						SrcIP: innerIP.SrcIP,
-						DstIP: innerIP.DstIP,
-						TTL:   innerIP.TTL,
+						SrcIP: rp.Addr,
+						DstIP: sp.LocalAddr,
 					},
 					UDP: dublintraceroute.UDP{
 						SrcPort: uint16(innerUDP.SrcPort),
