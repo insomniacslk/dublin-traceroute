@@ -1,4 +1,4 @@
-package dublintraceroute
+package probes
 
 import (
 	"encoding/binary"
