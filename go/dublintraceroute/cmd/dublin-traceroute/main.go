@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	dublintraceroute "../.."
-	probes "../../probes"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 )
 
 // Program constants and default values
@@ -157,5 +157,4 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(results.ToJson(true))
-	// TODO convert results to JSON
 }
