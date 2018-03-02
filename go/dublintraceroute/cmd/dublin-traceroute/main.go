@@ -111,13 +111,13 @@ func main() {
 	}
 
 	flag.Parse()
-	if len(flag.Args()) != 1 {
-		log.Fatal("Exactly one target is required")
-	}
-
 	if Args.version {
 		fmt.Printf("%v %v\n", ProgramName, ProgramVersion)
 		os.Exit(0)
+	}
+
+	if len(flag.Args()) != 1 {
+		log.Fatal("Exactly one target is required")
 	}
 
 	target, err := resolve(flag.Arg(0), !Args.v4)
