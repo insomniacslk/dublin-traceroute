@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -101,7 +102,7 @@ func init() {
 	flag.IntVar(&Args.maxTTL, "max-ttl", DefaultMaxTTL, "Set the maximum TTL")
 	flag.IntVar(&Args.delay, "delay", DefaultDelay, "Set the inter-packet delay in msecs")
 	flag.BoolVar(&Args.brokenNAT, "broken-nat", false, "Use this when the network has a broken NAT. Useful when no results are shown after a certain TTL when they are expected")
-	flag.StringVar(&Args.outputFile, "output-file", DefaultOutputFile, "Output file")
+	flag.StringVar(&Args.outputFile, "output-file", "", "Output file. If empty or omitted will print to stdout")
 	flag.BoolVar(&Args.v4, "force-ipv4", false, "Force the use of the legacy IPv4 protocol")
 }
 
@@ -156,5 +157,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(results.ToJson(true))
+	output := results.ToJson(true)
+	if Args.outputFile == "" {
+		fmt.Println(output)
+	} else {
+		err := ioutil.WriteFile(Args.outputFile, []byte(output), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Saved to %v", Args.outputFile)
+	}
 }
