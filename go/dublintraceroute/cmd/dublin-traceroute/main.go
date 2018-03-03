@@ -44,6 +44,9 @@ type args struct {
 	v4         bool
 }
 
+// Args will hold the program arguments
+var Args args
+
 // resolve returns the first IP address for the given host. If `wantV6` is true,
 // it will return the first IPv6 address, or nil if none. Similarly for IPv4
 // when `wantV6` is false.
@@ -77,8 +80,6 @@ func resolve(host string, wantV6 bool) (net.IP, error) {
 	}
 	return ret, nil
 }
-
-var Args args
 
 func init() {
 	// Ensure that CGO is disabled
@@ -125,7 +126,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(os.Stderr, "Target: %v\n", target)
+	fmt.Fprintf(os.Stderr, "Target                : %v\n", target)
+	fmt.Fprintf(os.Stderr, "Base source port      : %v\n", Args.sport)
+	fmt.Fprintf(os.Stderr, "Base destination port : %v\n", Args.dport)
+	fmt.Fprintf(os.Stderr, "Number of paths       : %v\n", Args.npaths)
+	fmt.Fprintf(os.Stderr, "Minimum TTL           : %v\n", Args.minTTL)
+	fmt.Fprintf(os.Stderr, "Maximum TTL           : %v\n", Args.maxTTL)
+	fmt.Fprintf(os.Stderr, "Inter-packet delay    : %v\n", Args.delay)
+	fmt.Fprintf(os.Stderr, "Timeout               : %v\n", time.Duration(Args.delay)*time.Millisecond)
+	fmt.Fprintf(os.Stderr, "Treat as broken NAT   : %v\n", Args.brokenNAT)
 
 	var dt dublintraceroute.DublinTraceroute
 	if Args.v4 {
@@ -165,6 +174,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Saved to %v", Args.outputFile)
+		log.Printf("Saved JSON file to %v", Args.outputFile)
+		log.Printf("You can convert it to DOT by running python3 -m dublintraceroute plot %v", Args.outputFile)
 	}
 }

@@ -234,7 +234,6 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 	results := dublintraceroute.Results{
 		Flows: make(map[uint16][]dublintraceroute.Probe),
 	}
-	// TODO add source node to the results
 	for _, rp := range received {
 		if len(rp.Packet.Layers()) < 2 {
 			// we are looking for packets with two layers - ICMP and an UDP payload
