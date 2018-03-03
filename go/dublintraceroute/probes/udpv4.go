@@ -29,7 +29,6 @@ type UDPv4 struct {
 	BrokenNAT bool
 }
 
-// TODO implement this function
 func computeFlowhash(p gopacket.Packet) (uint16, error) {
 	if len(p.Layers()) < 2 ||
 		p.Layers()[0].LayerType() != layers.LayerTypeIPv4 ||
@@ -70,16 +69,23 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
+// Probe represents a sent probe packet with its metadata
 type Probe struct {
-	Packet    gopacket.Packet
+	Packet gopacket.Packet
+	// time when the packet is sent
 	Timestamp time.Time
+	// local address of the packet sender
 	LocalAddr net.IP
 }
 
+// ProbeResponse represents a received probe packet with its metadata. The
+// field types are the same as Probe, but their meaning is slightly different
 type ProbeResponse struct {
-	Packet    gopacket.Packet
+	Packet gopacket.Packet
+	// time when the packet is received
 	Timestamp time.Time
-	Addr      net.IP
+	// sender IP address
+	Addr net.IP
 }
 
 // ForgePackets returns a list of packets that will be sent as probes
