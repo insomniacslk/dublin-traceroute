@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 	"golang.org/x/net/icmp"
 )
 
@@ -211,9 +211,9 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]ProbeResponse, error) {
 
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure.
-func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Results {
-	results := dublintraceroute.Results{
-		Flows: make(map[uint16][]dublintraceroute.Probe),
+func (d UDPv4) Match(sent []Probe, received []ProbeResponse) results.Results {
+	res := results.Results{
+		Flows: make(map[uint16][]results.Probe),
 	}
 
 	for _, sp := range sent {
@@ -227,15 +227,15 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			log.Printf("Error getting UDP layer in sent packet: %v", err)
 			continue
 		}
-		probe := dublintraceroute.Probe{
-			Sent: dublintraceroute.Packet{
+		probe := results.Probe{
+			Sent: results.Packet{
 				Timestamp: sp.Timestamp,
-				IP: dublintraceroute.IP{
+				IP: results.IP{
 					SrcIP: sp.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP,
 					DstIP: sentIP.DstIP,
 					TTL:   sentIP.TTL,
 				},
-				UDP: dublintraceroute.UDP{
+				UDP: results.UDP{
 					SrcPort: uint16(sentUDP.SrcPort),
 					DstPort: uint16(sentUDP.DstPort),
 				},
@@ -301,19 +301,19 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			probe.RttUsec = uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000
 			probe.NATID = NATID
 			probe.ZeroTTLForwardingBug = (innerIP.TTL == 0)
-			probe.Received = &dublintraceroute.Packet{
+			probe.Received = &results.Packet{
 				Timestamp: rp.Timestamp,
-				ICMP: dublintraceroute.ICMP{
+				ICMP: results.ICMP{
 					// XXX it seems that gopacket's ICMP does not support extensions for MPLS..
 					Type:        icmp.TypeCode.Type(),
 					Code:        icmp.TypeCode.Code(),
 					Description: description,
 				},
-				IP: dublintraceroute.IP{
+				IP: results.IP{
 					SrcIP: rp.Addr,
 					DstIP: sp.LocalAddr,
 				},
-				UDP: dublintraceroute.UDP{
+				UDP: results.UDP{
 					SrcPort: uint16(innerUDP.SrcPort),
 					DstPort: uint16(innerUDP.DstPort),
 				},
@@ -321,13 +321,13 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			// break, since this is a response to the sent probe
 			break
 		}
-		results.Flows[flowID] = append(results.Flows[flowID], probe)
+		res.Flows[flowID] = append(res.Flows[flowID], probe)
 	}
-	return results
+	return res
 }
 
 // Traceroute sends the probes and returns a Results structure or an error
-func (d UDPv4) Traceroute() (*dublintraceroute.Results, error) {
+func (d UDPv4) Traceroute() (*results.Results, error) {
 	if err := d.Validate(); err != nil {
 		return nil, err
 	}

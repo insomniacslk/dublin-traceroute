@@ -2,6 +2,8 @@ package dublintraceroute
 
 import (
 	"time"
+
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 )
 
 // default values and constants
@@ -13,5 +15,5 @@ const (
 // probe type has to implement
 type DublinTraceroute interface {
 	Validate() error
-	Traceroute() (*Results, error)
+	Traceroute() (*results.Results, error)
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 )
 
 // UDPv6 is a probe type based on IPv6 and UDP
@@ -88,12 +88,12 @@ func (d UDPv6) Listen() ([]gopacket.Packet, error) {
 	return nil, nil
 }
 
-func (d UDPv6) Match(sent, received []gopacket.Packet) dublintraceroute.Results {
-	return dublintraceroute.Results{}
+func (d UDPv6) Match(sent, received []gopacket.Packet) results.Results {
+	return results.Results{}
 }
 
 // Traceroute sends the probes and returns a Results structure or an error
-func (d UDPv6) Traceroute() (*dublintraceroute.Results, error) {
+func (d UDPv6) Traceroute() (*results.Results, error) {
 	if err := d.Validate(); err != nil {
 		return nil, err
 	}
