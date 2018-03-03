@@ -66,7 +66,7 @@ type Results struct {
 	compressed bool
 }
 
-func (r Results) compress() {
+func (r *Results) compress() {
 	for k, v := range r.Flows {
 		for idx, e := range v {
 			if e.IsLast {
