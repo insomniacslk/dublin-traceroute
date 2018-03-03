@@ -108,8 +108,10 @@ func init() {
 }
 
 func main() {
+	SetColourPurple := "\x1b[0;35m"
+	UnsetColour := "\x1b[0m"
 	if os.Geteuid() == 0 {
-		fmt.Fprintf(os.Stderr, "WARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative\n")
+		fmt.Fprintf(os.Stderr, "%sWARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative%s\n", SetColourPurple, UnsetColour)
 	}
 
 	flag.Parse()
@@ -126,6 +128,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Fprintf(os.Stderr, "Traceroute configuration:\n")
 	fmt.Fprintf(os.Stderr, "Target                : %v\n", target)
 	fmt.Fprintf(os.Stderr, "Base source port      : %v\n", Args.sport)
 	fmt.Fprintf(os.Stderr, "Base destination port : %v\n", Args.dport)
