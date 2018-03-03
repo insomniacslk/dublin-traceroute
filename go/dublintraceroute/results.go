@@ -51,14 +51,14 @@ type Packet struct {
 }
 
 type Probe struct {
-	Flowhash             uint16 `json:"flowhash"`
-	IsLast               bool   `json:"is_last"`
-	Name                 string `json:"name"`
-	NATID                uint16 `json:"nat_id"`
-	RttUsec              uint64 `json:"rtt_usec"`
-	Sent                 Packet `json:"sent"`
-	Received             Packet `json:"received"`
-	ZeroTTLForwardingBug bool   `json:"zerottl_forwarding_bug"`
+	Flowhash             uint16  `json:"flowhash"`
+	IsLast               bool    `json:"is_last"`
+	Name                 string  `json:"name"`
+	NATID                uint16  `json:"nat_id"`
+	RttUsec              uint64  `json:"rtt_usec"`
+	Sent                 Packet  `json:"sent"`
+	Received             *Packet `json:"received"`
+	ZeroTTLForwardingBug bool    `json:"zerottl_forwarding_bug"`
 }
 
 type Results struct {

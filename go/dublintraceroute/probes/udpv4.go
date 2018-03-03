@@ -78,14 +78,89 @@ type Probe struct {
 	LocalAddr net.IP
 }
 
-// ProbeResponse represents a received probe packet with its metadata. The
-// field types are the same as Probe, but their meaning is slightly different
+func (p Probe) Validate() error {
+	if len(p.Packet.Layers()) < 2 {
+		return errors.New("Invalid Probe: less than 2 layers found")
+	}
+	if _, ok := p.Packet.Layers()[0].(*layers.IPv4); !ok {
+		return errors.New("Invalid ProbeResponse: first layer is not IPv4")
+	}
+	if _, ok := p.Packet.Layers()[1].(*layers.UDP); !ok {
+		return errors.New("Invalid ProbeResponse: second layer is not UDP")
+	}
+	return nil
+}
+
+func (p Probe) IPv4Layer() (*layers.IPv4, error) {
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+	return p.Packet.Layers()[0].(*layers.IPv4), nil
+}
+
+func (p Probe) UDPLayer() (*layers.UDP, error) {
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+	return p.Packet.Layers()[1].(*layers.UDP), nil
+}
+
+// ProbeResponse represents a received probe packet with its metadata
 type ProbeResponse struct {
 	Packet gopacket.Packet
 	// time when the packet is received
 	Timestamp time.Time
 	// sender IP address
-	Addr net.IP
+	Addr        net.IP
+	innerPacket *gopacket.Packet
+}
+
+func (pr *ProbeResponse) Validate() error {
+	if len(pr.Packet.Layers()) < 2 {
+		return errors.New("Invalid ProbeResponse: less than 2 layers found")
+	}
+	if _, ok := pr.Packet.Layers()[0].(*layers.ICMPv4); !ok {
+		return errors.New("Invalid ProbeResponse: first layer is not ICMPv4")
+	}
+	if pr.innerPacket == nil {
+		icmp := pr.Packet.Layers()[0].(*layers.ICMPv4)
+		innerPacket := gopacket.NewPacket(icmp.LayerPayload(), layers.LayerTypeIPv4, gopacket.Default)
+		if innerPacket == nil {
+			return errors.New("Invalid ProbeResponse: no inner packet found")
+		}
+		pr.innerPacket = &innerPacket
+	}
+	if len((*pr.innerPacket).Layers()) < 2 {
+		return errors.New("Invalid ProbeResponse: less than 2 layers in the inner packet")
+	}
+	if _, ok := (*pr.innerPacket).Layers()[0].(*layers.IPv4); !ok {
+		return errors.New("Invalid ProbeResponse: first inner layer is not IPv4")
+	}
+	if _, ok := (*pr.innerPacket).Layers()[1].(*layers.UDP); !ok {
+		return errors.New("Invalid ProbeResponse: second inner layer is not UDP")
+	}
+	return nil
+}
+
+func (pr ProbeResponse) ICMPLayer() (*layers.ICMPv4, error) {
+	if err := pr.Validate(); err != nil {
+		return nil, err
+	}
+	return pr.Packet.Layers()[0].(*layers.ICMPv4), nil
+}
+
+func (pr ProbeResponse) InnerIPv4Layer() (*layers.IPv4, error) {
+	if err := pr.Validate(); err != nil {
+		return nil, err
+	}
+	return (*pr.innerPacket).Layers()[0].(*layers.IPv4), nil
+}
+
+func (pr ProbeResponse) InnerUDPLayer() (*layers.UDP, error) {
+	if err := pr.Validate(); err != nil {
+		return nil, err
+	}
+	return (*pr.innerPacket).Layers()[1].(*layers.UDP), nil
 }
 
 // ForgePackets returns a list of packets that will be sent as probes
@@ -234,51 +309,57 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 	results := dublintraceroute.Results{
 		Flows: make(map[uint16][]dublintraceroute.Probe),
 	}
-	for _, rp := range received {
-		if len(rp.Packet.Layers()) < 2 {
-			// we are looking for packets with two layers - ICMP and an UDP payload
+
+	for _, sp := range sent {
+		sentIP, err := sp.IPv4Layer()
+		if err != nil {
+			log.Printf("Error getting IPv4 layer in sent packet: %v", err)
 			continue
 		}
-		if rp.Packet.Layers()[0].LayerType() != layers.LayerTypeICMPv4 {
-			// not an ICMP
+		sentUDP, err := sp.UDPLayer()
+		if err != nil {
+			log.Printf("Error getting UDP layer in sent packet: %v", err)
 			continue
 		}
-		icmp := rp.Packet.Layers()[0].(*layers.ICMPv4)
-		if icmp.TypeCode.Type() != layers.ICMPv4TypeTimeExceeded &&
-			!(icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort) {
-			// we want time-exceeded or port-unreachable
-			continue
+		probe := dublintraceroute.Probe{
+			Sent: dublintraceroute.Packet{
+				Timestamp: sp.Timestamp,
+				IP: dublintraceroute.IP{
+					SrcIP: sp.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP,
+					DstIP: sentIP.DstIP,
+					TTL:   sentIP.TTL,
+				},
+				UDP: dublintraceroute.UDP{
+					SrcPort: uint16(sentUDP.SrcPort),
+					DstPort: uint16(sentUDP.DstPort),
+				},
+			},
 		}
-		// XXX it seems like gopacket's ICMP does not support extensions for MPLS..
-		innerPacket := gopacket.NewPacket(icmp.LayerPayload(), layers.LayerTypeIPv4, gopacket.Default)
-		if len(innerPacket.Layers()) < 2 {
-			// we want the inner packet to have two layers, IP and UDP, i.e.
-			// what we have sent
-			continue
-		}
-		innerIP, ok := innerPacket.Layers()[0].(*layers.IPv4)
-		if !ok {
-			continue
-		}
-		innerUDP, ok := innerPacket.Layers()[1].(*layers.UDP)
-		if !ok {
-			continue
-		}
-		if !bytes.Equal(innerIP.DstIP.To4(), d.Target.To4()) {
-			// the destination is not our target, discard it
-			continue
-		}
-		for _, sp := range sent {
-			sentIP, ok := sp.Packet.Layers()[0].(*layers.IPv4)
-			if !ok {
-				// invalid sent packet
-				log.Print("Invalid sent packet, the first layer is not IPv4")
+		flowID := uint16(sentUDP.DstPort)
+		for _, rp := range received {
+			icmp, err := rp.ICMPLayer()
+			if err != nil {
+				log.Printf("Error getting ICMP layer in received packet: %v", err)
 				continue
 			}
-			sentUDP, ok := sp.Packet.Layers()[1].(*layers.UDP)
-			if !ok {
-				// invalid sent packet
-				log.Print("Invalid sent packet, the second layer is not UDP")
+			if icmp.TypeCode.Type() != layers.ICMPv4TypeTimeExceeded &&
+				!(icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort) {
+				// we want time-exceeded or port-unreachable
+				log.Print("Bad ICMP type/code")
+				continue
+			}
+			innerIP, err := rp.InnerIPv4Layer()
+			if err != nil {
+				log.Printf("Error getting inner IPv4 layer in received packet: %v", err)
+				continue
+			}
+			if !bytes.Equal(innerIP.DstIP.To4(), d.Target.To4()) {
+				// this is not a response to any of our probes, discard it
+				continue
+			}
+			innerUDP, err := rp.InnerUDPLayer()
+			if err != nil {
+				log.Printf("Error getting inner UDP layer in received packet: %v", err)
 				continue
 			}
 			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
@@ -295,7 +376,6 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			NATID := innerUDP.Checksum - sentUDP.Checksum
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
-			flowID := uint16(sentUDP.DstPort)
 			flowhash, err := computeFlowhash(sp.Packet)
 			if err != nil {
 				log.Print(err)
@@ -308,44 +388,34 @@ func (d UDPv4) Match(sent []Probe, received []ProbeResponse) dublintraceroute.Re
 			} else if icmp.TypeCode.Type() == layers.ICMPv4TypeTimeExceeded && icmp.TypeCode.Code() == layers.ICMPv4CodeTTLExceeded {
 				description = "TTL expired in transit"
 			}
-			probe := dublintraceroute.Probe{
-				Flowhash: flowhash,
-				IsLast:   bytes.Equal(rp.Addr.To4(), d.Target.To4()),
-				Name:     rp.Addr.String(), // TODO compute this field
-				NATID:    NATID,
-				RttUsec:  uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000,
-				Sent: dublintraceroute.Packet{
-					Timestamp: sp.Timestamp,
-					IP: dublintraceroute.IP{
-						SrcIP: sp.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP,
-						DstIP: sentIP.DstIP,
-						TTL:   sentIP.TTL,
-					},
-					UDP: dublintraceroute.UDP{
-						SrcPort: uint16(sentUDP.SrcPort),
-						DstPort: uint16(sentUDP.DstPort),
-					},
+			// This is our packet, let's fill the probe data up
+			probe.Flowhash = flowhash
+			probe.IsLast = bytes.Equal(rp.Addr.To4(), d.Target.To4())
+			probe.Name = rp.Addr.String() // TODO compute this field
+			probe.RttUsec = uint64(rp.Timestamp.Sub(sp.Timestamp)) / 1000
+			probe.NATID = NATID
+			probe.ZeroTTLForwardingBug = (innerIP.TTL == 0)
+			probe.Received = &dublintraceroute.Packet{
+				Timestamp: rp.Timestamp,
+				ICMP: dublintraceroute.ICMP{
+					// XXX it seems that gopacket's ICMP does not support extensions for MPLS..
+					Type:        icmp.TypeCode.Type(),
+					Code:        icmp.TypeCode.Code(),
+					Description: description,
 				},
-				Received: dublintraceroute.Packet{
-					Timestamp: rp.Timestamp,
-					ICMP: dublintraceroute.ICMP{
-						Type:        icmp.TypeCode.Type(),
-						Code:        icmp.TypeCode.Code(),
-						Description: description,
-					},
-					IP: dublintraceroute.IP{
-						SrcIP: rp.Addr,
-						DstIP: sp.LocalAddr,
-					},
-					UDP: dublintraceroute.UDP{
-						SrcPort: uint16(innerUDP.SrcPort),
-						DstPort: uint16(innerUDP.DstPort),
-					},
+				IP: dublintraceroute.IP{
+					SrcIP: rp.Addr,
+					DstIP: sp.LocalAddr,
 				},
-				ZeroTTLForwardingBug: innerIP.TTL == 0,
+				UDP: dublintraceroute.UDP{
+					SrcPort: uint16(innerUDP.SrcPort),
+					DstPort: uint16(innerUDP.DstPort),
+				},
 			}
-			results.Flows[flowID] = append(results.Flows[flowID], probe)
+			// break, since this is a response to the sent probe
+			break
 		}
+		results.Flows[flowID] = append(results.Flows[flowID], probe)
 	}
 	return results
 }
