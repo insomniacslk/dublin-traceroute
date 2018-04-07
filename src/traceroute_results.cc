@@ -49,6 +49,8 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 		inner_ip = icmp.rfind_pdu<RawPDU>().to<IP>();
 	} catch (pdu_not_found) {
 		return nullptr;
+	} catch (malformed_packet) {
+		return nullptr;
 	}
 
 	// does the inner packet contain our original UDP packet?
@@ -56,6 +58,8 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 	try {
 		inner_udp = inner_ip.rfind_pdu<UDP>();
 	} catch (pdu_not_found) {
+		return nullptr;
+	} catch (malformed_packet) {
 		return nullptr;
 	}
 
