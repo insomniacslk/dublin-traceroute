@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
-	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes/probev4"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes/probev6"
 )
 
 // Program constants and default values
@@ -141,7 +142,7 @@ func main() {
 
 	var dt dublintraceroute.DublinTraceroute
 	if Args.v4 {
-		dt = &probes.UDPv4{
+		dt = &probev4.UDPv4{
 			Target:    target,
 			SrcPort:   uint16(Args.sport),
 			DstPort:   uint16(Args.dport),
@@ -153,7 +154,7 @@ func main() {
 			BrokenNAT: Args.brokenNAT,
 		}
 	} else {
-		dt = &probes.UDPv6{
+		dt = &probev6.UDPv6{
 			Target:      target,
 			SrcPort:     uint16(Args.sport),
 			DstPort:     uint16(Args.dport),

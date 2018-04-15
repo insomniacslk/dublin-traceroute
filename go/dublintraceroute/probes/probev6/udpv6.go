@@ -1,4 +1,4 @@
-package probes
+package probev6
 
 import (
 	"encoding/binary"
@@ -7,8 +7,11 @@ import (
 	"net"
 	"time"
 
+	"golang.org/x/net/icmp"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 )
 
@@ -65,8 +68,9 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			ip.Length += 8 // UDP header size
 
 			// forge payload
-			payload := []byte{'N', 'S', 'M', 'N', 'C', 0x00, 0x00}
-			ip.Length += uint16(len(payload))
+			payload := []byte{'N', 'S', 'M', 'N', 'C'}
+			id := dstPort + uint16(hopLimit)
+			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
 			binary.BigEndian.PutUint16(payload[len(payload)-2:], dstPort+uint16(hopLimit))
 
 			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
@@ -77,18 +81,60 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 	return packets
 }
 
-func (d UDPv6) SendPackets(packets []gopacket.Packet) error {
+// SendReceive sends all the packets to the target address, respecting the
+// configured inter-packet delay
+func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.ProbeResponse, error) {
+	// TODO implement SendReceive
 	for _, p := range packets {
 		log.Print(p)
 	}
-	return nil
+	return nil, nil, nil
 }
 
-func (d UDPv6) Listen() ([]gopacket.Packet, error) {
-	return nil, nil
+// ListenFor waits for ICMP packets until the timeout expires
+func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) {
+	conn, err := icmp.ListenPacket("ip6:icmp", "0.0.0.0")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	packets := make([]probes.ProbeResponse, 0)
+	deadline := time.Now().Add(howLong)
+	for {
+		if deadline.Sub(time.Now()) <= 0 {
+			break
+		}
+		select {
+		default:
+			// TODO tune data size
+			data := make([]byte, 1024)
+			now := time.Now()
+			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
+			n, addr, err := conn.ReadFrom(data)
+			if err != nil {
+				if nerr, ok := err.(*net.OpError); ok {
+					if nerr.Timeout() {
+						continue
+					}
+					return nil, err
+				}
+			}
+			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv6, gopacket.Lazy)
+			packets = append(packets, &ProbeResponseUDPv6{
+				Packet:    p,
+				Addr:      (*(addr).(*net.IPAddr)).IP,
+				Timestamp: now,
+			})
+		}
+	}
+
+	return packets, nil
 }
 
-func (d UDPv6) Match(sent, received []gopacket.Packet) results.Results {
+// Match compares the sent and received packets and finds the matching ones. It
+// returns a Results structure
+func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) results.Results {
+	// TODO implement Match
 	return results.Results{}
 }
 
@@ -98,14 +144,11 @@ func (d UDPv6) Traceroute() (*results.Results, error) {
 		return nil, err
 	}
 	packets := d.ForgePackets()
-	if err := d.SendPackets(packets); err != nil {
-		return nil, err
-	}
-	received, err := d.Listen()
+	sent, received, err := d.SendReceive(packets)
 	if err != nil {
 		return nil, err
 	}
-	results := d.Match(packets, received)
+	results := d.Match(sent, received)
 
 	return &results, nil
 }
