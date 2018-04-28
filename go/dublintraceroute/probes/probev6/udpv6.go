@@ -1,10 +1,11 @@
 package probev6
 
 import (
+	"os"
 	"encoding/binary"
 	"errors"
-	"log"
 	"net"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -84,16 +85,67 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 // SendReceive sends all the packets to the target address, respecting the
 // configured inter-packet delay
 func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.ProbeResponse, error) {
-	// TODO implement SendReceive
-	for _, p := range packets {
-		log.Print(p)
+	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
+	if err != nil {
+		return nil, nil, os.NewSyscallError("socket", err)
 	}
-	return nil, nil, nil
+	if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+		return nil, nil, os.NewSyscallError("setsockopt", err)
+	}
+	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IP_HDRINCL, 1); err != nil {
+		return nil, nil, os.NewSyscallError("setsockopt", err)
+	}
+	var daddrBytes [net.IPv6len]byte
+	copy(daddrBytes[:], d.Target.To16())
+
+	// spawn the listener
+	recvErrors := make(chan error)
+	recvChan := make(chan []probes.ProbeResponse, 1)
+	go func(errch chan error, rc chan []probes.ProbeResponse) {
+		howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
+		received, err := d.ListenFor(howLong)
+		errch <- err
+		// TODO pass the rp chan to ListenFor and let it feed packets there
+		rc <- received
+	}(recvErrors, recvChan)
+
+	// ugly porkaround until I find how to get the local address in a better way
+	conn, err := net.Dial("udp6", net.JoinHostPort(d.Target.String(), "0"))
+	if err != nil {
+		return nil, nil, err
+	}
+	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
+	conn.Close()
+	sent := make([]probes.Probe, 0, len(packets))
+	for _, p := range packets {
+        // TODO set source port
+		daddr := syscall.SockaddrInet6{
+			Addr: daddrBytes,
+			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
+		}
+		// FIXME lots of overhead here! Don't use setsockopt for each packet
+		// TODO add ancillary data via cmsg, IPV6_UNICAST_HOPS set to the
+		// desired hoplimit
+		hoplimit := p.NetworkLayer().(*layers.IPv6).HopLimit
+		if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IPV6_UNICAST_HOPS, int(hoplimit)); err != nil {
+			return nil, nil, os.NewSyscallError("setsockopt", err)
+		}
+		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
+			return nil, nil, os.NewSyscallError("sendto", err)
+		}
+		sent = append(sent, ProbeUDPv6{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
+		time.Sleep(d.Delay)
+	}
+	if err = <-recvErrors; err != nil {
+		return nil, nil, err
+	}
+	received := <-recvChan
+	return sent, received, nil
 }
 
 // ListenFor waits for ICMP packets until the timeout expires
 func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) {
-	conn, err := icmp.ListenPacket("ip6:icmp", "0.0.0.0")
+	conn, err := icmp.ListenPacket("ip6:icmp", "::")
 	if err != nil {
 		return nil, err
 	}

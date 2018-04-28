@@ -130,7 +130,7 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_HDRINCL, 1); err != nil {
 		return nil, nil, err
 	}
-	var daddrBytes [4]byte
+	var daddrBytes [net.IPv4len]byte
 	copy(daddrBytes[:], d.Target.To4())
 
 	// spawn the listener

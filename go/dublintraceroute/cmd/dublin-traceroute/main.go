@@ -127,7 +127,7 @@ func main() {
 
 	target, err := resolve(flag.Arg(0), !Args.v4)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Cannot resolve %s: %v", flag.Arg(0), err)
 	}
 	fmt.Fprintf(os.Stderr, "Traceroute configuration:\n")
 	fmt.Fprintf(os.Stderr, "Target                : %v\n", target)
@@ -168,7 +168,7 @@ func main() {
 	}
 	results, err := dt.Traceroute()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Traceroute() failed: %v", err)
 	}
 	output := results.ToJson(true)
 	if Args.outputFile == "" {
@@ -176,7 +176,7 @@ func main() {
 	} else {
 		err := ioutil.WriteFile(Args.outputFile, []byte(output), 0644)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("WriteFile failed: %v", err)
 		}
 		log.Printf("Saved JSON file to %v", Args.outputFile)
 		log.Printf("You can convert it to DOT by running python3 -m dublintraceroute plot %v", Args.outputFile)
