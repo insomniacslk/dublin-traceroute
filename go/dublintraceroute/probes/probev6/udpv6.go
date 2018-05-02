@@ -1,10 +1,10 @@
 package probev6
 
 import (
-	"os"
 	"encoding/binary"
 	"errors"
 	"net"
+	"os"
 	"syscall"
 	"time"
 
@@ -69,6 +69,18 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			ip.Length += 8 // UDP header size
 
 			// forge payload
+			// The payload does the trick here - in a similar manner to how the
+			// IP ID is used for the IPv4 probes.
+			// In order to uniquely track a probe packet we need a unique  field
+			// that is part of the IP header or the first 8 bytes of the above
+			// layer (UDP, TCP, whatever it is), because these are the bytes
+			// that are guaranteed to be returned by an ICMP message.
+			// This field also doesn't have to be used by the ECMP hashing
+			// algorithm. Therefore dublin-traceroute uses the Payload Length in
+			// the IPv6 header and tunes its size to represent a unique ID that
+			// will be used to identify the original probe packet carried by the
+			// ICMP response.
+			// TODO implement the above technique
 			payload := []byte{'N', 'S', 'M', 'N', 'C'}
 			id := dstPort + uint16(hopLimit)
 			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
@@ -118,7 +130,7 @@ func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	conn.Close()
 	sent := make([]probes.Probe, 0, len(packets))
 	for _, p := range packets {
-        // TODO set source port
+		// TODO set source port
 		daddr := syscall.SockaddrInet6{
 			Addr: daddrBytes,
 			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
