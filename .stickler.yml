@@ -1,0 +1,11 @@
+linters:
+  golint:
+    fixer: true
+  flake8:
+    fixer: true
+  rubocop:
+    fixer: true
+  shellcheck:
+    shell: bash
+fixers:
+  enable: true
