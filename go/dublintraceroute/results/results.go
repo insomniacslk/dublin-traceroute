@@ -84,7 +84,7 @@ func (r *Results) ToJson(compress bool, indent string) string {
 			r.compress()
 		}
 	}
-	b, err := json.MarshalIndent(r, "" ,indent)
+	b, err := json.MarshalIndent(r, "", indent)
 	if err != nil {
 		return ""
 	}

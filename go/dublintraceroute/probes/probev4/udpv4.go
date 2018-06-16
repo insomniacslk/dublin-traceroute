@@ -272,7 +272,7 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			}
 			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
 				// source and destination portdo not match - it's not for
-                // this packet
+				// this packet
 				continue
 			}
 			if innerIP.Id != sentIP.Id {
