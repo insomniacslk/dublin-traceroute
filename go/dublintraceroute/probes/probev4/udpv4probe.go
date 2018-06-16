@@ -19,7 +19,7 @@ type ProbeUDPv4 struct {
 }
 
 // Validate verifies that the probe has the expected structure, and returns an error if not
-func (p ProbeUDPv4) Validate() error {
+func (p *ProbeUDPv4) Validate() error {
 	if len(p.Packet.Layers()) < 2 {
 		return errors.New("Invalid Probe: less than 2 layers found")
 	}
@@ -33,7 +33,7 @@ func (p ProbeUDPv4) Validate() error {
 }
 
 // IPv4Layer returns the IPv4 layer of the probe, expecting it to be the first encountered layer
-func (p ProbeUDPv4) IPv4Layer() (*layers.IPv4, error) {
+func (p *ProbeUDPv4) IPv4Layer() (*layers.IPv4, error) {
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (p ProbeUDPv4) IPv4Layer() (*layers.IPv4, error) {
 }
 
 // UDPLayer returns the UDP layer of the probe, expecting it to be the second encountered layer
-func (p ProbeUDPv4) UDPLayer() (*layers.UDP, error) {
+func (p *ProbeUDPv4) UDPLayer() (*layers.UDP, error) {
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
@@ -86,9 +86,9 @@ func (pr *ProbeResponseUDPv4) Validate() error {
 	return nil
 }
 
-// ICMPv4Layer returns the UDP layer of the probe, expecting it to be the
+// ICMPv4Layer returns the ICMPv4 layer of the probe, expecting it to be the
 // first encountered layer
-func (pr ProbeResponseUDPv4) ICMPv4Layer() (*layers.ICMPv4, error) {
+func (pr *ProbeResponseUDPv4) ICMPv4Layer() (*layers.ICMPv4, error) {
 	if err := pr.Validate(); err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (pr ProbeResponseUDPv4) ICMPv4Layer() (*layers.ICMPv4, error) {
 
 // InnerIPv4Layer returns the IP layer of the inner packet of the probe,
 // expecting it to be the first encountered layer in the inner packet
-func (pr ProbeResponseUDPv4) InnerIPv4Layer() (*layers.IPv4, error) {
+func (pr *ProbeResponseUDPv4) InnerIPv4Layer() (*layers.IPv4, error) {
 	if err := pr.Validate(); err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (pr ProbeResponseUDPv4) InnerIPv4Layer() (*layers.IPv4, error) {
 
 // InnerUDPLayer returns the UDP layer of the inner packet of the probe,
 // expecting it to be the second encountered layer in the inner packet
-func (pr ProbeResponseUDPv4) InnerUDPLayer() (*layers.UDP, error) {
+func (pr *ProbeResponseUDPv4) InnerUDPLayer() (*layers.UDP, error) {
 	if err := pr.Validate(); err != nil {
 		return nil, err
 	}

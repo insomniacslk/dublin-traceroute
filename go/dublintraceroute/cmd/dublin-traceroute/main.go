@@ -170,7 +170,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Traceroute() failed: %v", err)
 	}
-	output := results.ToJson(true)
+	output := results.ToJson(true, "  ")
 	if Args.outputFile == "" {
 		fmt.Println(output)
 	} else {

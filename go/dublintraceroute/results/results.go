@@ -78,13 +78,13 @@ func (r *Results) compress() {
 	r.compressed = true
 }
 
-func (r *Results) ToJson(compress bool) string {
+func (r *Results) ToJson(compress bool, indent string) string {
 	if compress {
 		if !r.compressed {
 			r.compress()
 		}
 	}
-	b, err := json.Marshal(r)
+	b, err := json.MarshalIndent(r, "" ,indent)
 	if err != nil {
 		return ""
 	}

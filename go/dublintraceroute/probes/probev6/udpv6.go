@@ -1,8 +1,10 @@
 package probev6
 
 import (
+    "bytes"
 	"encoding/binary"
 	"errors"
+	"log"
 	"net"
 	"os"
 	"syscall"
@@ -60,7 +62,7 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			HopLimit:   hopLimit,
 			NextHeader: layers.IPProtocolUDP,
 		}
-		for dstPort := d.DstPort; dstPort <= d.DstPort+d.NumPaths; dstPort++ {
+		for dstPort := d.DstPort; dstPort <= d.DstPort+d.NumPaths - 1; dstPort++ {
 			udp := layers.UDP{
 				SrcPort: layers.UDPPort(d.SrcPort),
 				DstPort: layers.UDPPort(dstPort),
@@ -157,7 +159,7 @@ func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 
 // ListenFor waits for ICMP packets until the timeout expires
 func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) {
-	conn, err := icmp.ListenPacket("ip6:icmp", "::")
+	conn, err := icmp.ListenPacket("ip6:ipv6-icmp", "::")
 	if err != nil {
 		return nil, err
 	}
@@ -198,9 +200,122 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 // Match compares the sent and received packets and finds the matching ones. It
 // returns a Results structure
 func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) results.Results {
-	// TODO implement Match
-	return results.Results{}
-}
+    res := results.Results{
+        Flows: make(map[uint16][]results.Probe),
+    }
+	for _, sp := range sent {
+        spu := sp.(ProbeUDPv6)
+        sentIP, err := spu.IPv6Layer()
+        if err != nil {
+            log.Printf("Error getting IPv6 layer in sent packet: %v", err)
+            continue
+        }
+        sentUDP, err := spu.UDPLayer()
+        if err != nil {
+            log.Printf("Error getting UDP layer in sent packet: %v", err)
+        }
+        probe := results.Probe{
+            Sent: results.Packet{
+                Timestamp: spu.Timestamp,
+                IP: results.IP{
+                    SrcIP: spu.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP
+                    DstIP: sentIP.DstIP,
+                    TTL: sentIP.HopLimit,  // TTL should be really renamed to something better..
+                },
+                UDP: results.UDP{
+                    SrcPort: uint16(sentUDP.SrcPort),
+                    DstPort: uint16(sentUDP.DstPort),
+                },
+            },
+        }
+        flowID := uint16(sentUDP.DstPort)
+        for _, rp := range received {
+            rpu := rp.(*ProbeResponseUDPv6)
+            icmp, err := rpu.ICMPv6Layer()
+            if err != nil {
+                log.Printf("Error getting ICMPv6 layer in received packet: %v", err)
+                continue
+            }
+            if icmp.TypeCode.Type() != layers.ICMPv6TypeTimeExceeded &&
+                !(icmp.TypeCode.Type() == layers.ICMPv6TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv6CodePortUnreachable) {
+                    // we want time-exceeded or port-unreachable
+                    log.Print("Bad ICMP type/code")
+                    continue
+                }
+            innerIP, err := rpu.InnerIPv6Layer()
+            if err != nil {
+                log.Printf("Error getting inner IPv6 layer in received packet: %v", err)
+                continue
+            }
+            // TODO check that To16() is the right thing to call here
+            if !bytes.Equal(innerIP.DstIP.To16(), d.Target.To16()) {
+                // this is not a response to any of our probes, discard it
+                continue
+            }
+            innerUDP, err := rpu.InnerUDPLayer()
+            if err != nil {
+                log.Printf("Error getting inner UDP layer in received packet: %v", err)
+                continue
+            }
+            if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
+                // source and destination ports do not match - it's not for
+                // this packet
+            }
+            // TODO
+            // Here, in IPv4, we would check for innerIP.ID != sentIP.Id but
+            // for IPv6 we need something different. See the comment above
+            // about Payload Length, and line 278 in probes/probev4/udpv4.go
+
+            // at this point, we know that the sent and received packet
+            // belong to the same flow.
+            // TODO in IPv4, at this point we can detect a NAT using the
+            // checksum. Implement a similar technique for v6
+
+
+            // TODO implement computeFlowHash also for IPv6. The function
+            // can be generalized for both v4 and v6
+            // flowhash, err := computeFlowHash(spu.Packet)
+
+            // gopacket does not export the fields with descriptions :(
+            description := "Unknown"
+            if icmp.TypeCode.Type() == layers.ICMPv6TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv6CodePortUnreachable {
+                description = "Destination port unreachable"
+            } else if icmp.TypeCode.Type() == layers.ICMPv6TypeTimeExceeded && icmp.TypeCode.Code() == layers.ICMPv6CodeHopLimitExceeded {
+                description = "Hop limit exceeded"
+            }
+            // this is our packet. Let's fill the probe data up
+            // probe.Flowhash = flowhash
+            // TODO check if To16() is the right thing to do here
+            probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
+            probe.Name = rpu.Addr.String() // TODO compute this field
+            probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
+            // probe.NATID = NATID // TODO implement NAT detection for IPv6
+            probe.ZeroTTLForwardingBug = (innerIP.HopLimit == 0)
+            probe.Received = &results.Packet{
+                Timestamp: rpu.Timestamp,
+                ICMP: results.ICMP{
+                    // XXX it seems that gopacket's ICMP does not support
+                    // extentions for MPLS..
+                    Type: icmp.TypeCode.Type(),
+                    Code: icmp.TypeCode.Code(),
+                    Description: description,
+                },
+                IP: results.IP{
+                    SrcIP: rpu.Addr,
+                    DstIP: spu.LocalAddr,
+                },
+                UDP: results.UDP{
+                    SrcPort: uint16(innerUDP.SrcPort),
+                    DstPort: uint16(innerUDP.DstPort),
+                },
+            }
+            // break, since this is a response to the sent probe
+            break
+        }
+            res.Flows[flowID] = append(res.Flows[flowID], probe)
+        }
+	    return res
+    }
 
 // Traceroute sends the probes and returns a Results structure or an error
 func (d UDPv6) Traceroute() (*results.Results, error) {

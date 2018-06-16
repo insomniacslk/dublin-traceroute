@@ -160,7 +160,7 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
 			return nil, nil, err
 		}
-		sent = append(sent, ProbeUDPv4{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
+		sent = append(sent, &ProbeUDPv4{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
 		time.Sleep(d.Delay)
 	}
 	if err = <-recvErrors; err != nil {
@@ -217,7 +217,7 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 	}
 
 	for _, sp := range sent {
-		spu := sp.(ProbeUDPv4)
+		spu := sp.(*ProbeUDPv4)
 		sentIP, err := spu.IPv4Layer()
 		if err != nil {
 			log.Printf("Error getting IPv4 layer in sent packet: %v", err)
@@ -271,8 +271,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				continue
 			}
 			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
-				// source and destination port do not match - it's not this
-				// packet
+				// source and destination portdo not match - it's not for
+                // this packet
 				continue
 			}
 			if innerIP.Id != sentIP.Id {
