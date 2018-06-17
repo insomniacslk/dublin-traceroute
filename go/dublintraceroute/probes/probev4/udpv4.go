@@ -104,6 +104,7 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 			// IP ID in order to detect NATs
 			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
 			p := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv4, gopacket.Lazy)
+			// TODO check if p.ErrorLayer() != nil
 			// extract the UDP checksum and assign it to the IP ID, will be used
 			// to keep track of NATs
 			u := p.TransportLayer().(*layers.UDP)
@@ -111,6 +112,7 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 			// serialize the packet again after manipulating the IP ID
 			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
 			p = gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv4, gopacket.Lazy)
+			// TODO check if p.ErrorLayer() != nil
 			packets = append(packets, p)
 		}
 	}

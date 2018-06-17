@@ -68,9 +68,14 @@ func (pr *ProbeResponseUDPv6) Validate() error {
 	if _, ok := pr.Packet.Layers()[0].(*layers.ICMPv6); !ok {
 		return errors.New("Invalid ProbeResponse: first layer is not ICMPv6")
 	}
+	var icmp *layers.ICMPv6
 	if pr.innerPacket == nil {
-		icmp := pr.Packet.Layers()[0].(*layers.ICMPv6)
-		innerPacket := gopacket.NewPacket(icmp.LayerPayload(), layers.LayerTypeIPv6, gopacket.Default)
+		icmp = pr.Packet.Layers()[0].(*layers.ICMPv6)
+		// Skip the first 4 bytes. According to RFC 4443 those ICMPv6 types all have
+		// a 4-byte field whose interpretation is type-specific. After this
+		// field there's the original IPv6 header + data.
+		data := icmp.LayerPayload()
+		innerPacket := gopacket.NewPacket(data[4:], layers.LayerTypeIPv6, gopacket.Default)
 		if innerPacket == nil {
 			return errors.New("Invalid ProbeResponse: no inner packet found")
 		}

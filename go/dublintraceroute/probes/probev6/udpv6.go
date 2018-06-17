@@ -2,7 +2,6 @@ package probev6
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"log"
 	"net"
@@ -68,7 +67,7 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 				DstPort: layers.UDPPort(dstPort),
 			}
 			udp.SetNetworkLayerForChecksum(&ip)
-			ip.Length += 8 // UDP header size
+			ip.Length = 8 // UDP header size
 
 			// forge payload
 			// The payload does the trick here - in a similar manner to how the
@@ -83,13 +82,24 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			// will be used to identify the original probe packet carried by the
 			// ICMP response.
 			// TODO implement the above technique
-			payload := []byte{'N', 'S', 'M', 'N', 'C'}
-			id := dstPort + uint16(hopLimit)
-			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
-			binary.BigEndian.PutUint16(payload[len(payload)-2:], dstPort+uint16(hopLimit))
+
+			// length is 13 for the first flow, 14 for the second, etc.
+			// 13 is given by 8 (udp header length) + 5 (magic string
+			// length, "NSMNC")
+			length := 5 + dstPort - d.DstPort
+			// 5 is the length of the magic string "NSMNC"
+			repeat := int(length / 5)
+			if repeat%5 > 0 {
+				repeat++
+			}
+			// the payload length is used to identify the flow in this type
+			// of probe
+			payload := bytes.Repeat([]byte{'N', 'S', 'M', 'N', 'C'}, repeat)[:length]
+			ip.Length += uint16(len(payload))
 
 			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
 			p := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Lazy)
+			// TODO check if p.ErrorLayer() != nil
 			packets = append(packets, p)
 		}
 	}
@@ -133,18 +143,20 @@ func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	sent := make([]probes.Probe, 0, len(packets))
 	for _, p := range packets {
 		// TODO set source port
+		ip := p.NetworkLayer().(*layers.IPv6)
+		udp := p.TransportLayer().(*layers.UDP)
 		daddr := syscall.SockaddrInet6{
 			Addr: daddrBytes,
-			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
+			Port: int(udp.DstPort),
 		}
 		// FIXME lots of overhead here! Don't use setsockopt for each packet
 		// TODO add ancillary data via cmsg, IPV6_UNICAST_HOPS set to the
 		// desired hoplimit
-		hoplimit := p.NetworkLayer().(*layers.IPv6).HopLimit
+		hoplimit := ip.HopLimit
 		if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IPV6_UNICAST_HOPS, int(hoplimit)); err != nil {
 			return nil, nil, os.NewSyscallError("setsockopt", err)
 		}
-		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
+		if err = syscall.Sendto(fd, udp.Payload, 0, &daddr); err != nil {
 			return nil, nil, os.NewSyscallError("sendto", err)
 		}
 		sent = append(sent, ProbeUDPv6{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
@@ -257,9 +269,21 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				log.Printf("Error getting inner UDP layer in received packet: %v", err)
 				continue
 			}
-			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
-				// source and destination ports do not match - it's not for
-				// this packet
+			if sentUDP.DstPort != innerUDP.DstPort {
+				// this is not our packet
+				continue
+			}
+			// skip source port matching as this may be mangled by a NAT.
+			// TODO use Payload Length to detect port-mangling NATs
+			/*
+				if sentUDP.SrcPort != innerUDP.SrcPort {
+					// source ports do not match - it's not for this packet
+					continue
+				}
+			*/
+			if innerIP.Length != sentIP.Length {
+				// different length, not our packet
+				continue
 			}
 			// TODO
 			// Here, in IPv4, we would check for innerIP.ID != sentIP.Id but
