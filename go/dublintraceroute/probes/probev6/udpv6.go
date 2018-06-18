@@ -273,14 +273,11 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				// this is not our packet
 				continue
 			}
-			// skip source port matching as this may be mangled by a NAT.
-			// TODO use Payload Length to detect port-mangling NATs
-			/*
-				if sentUDP.SrcPort != innerUDP.SrcPort {
-					// source ports do not match - it's not for this packet
-					continue
-				}
-			*/
+			// source port may be mangled by a NAT
+			if sentUDP.SrcPort != innerUDP.SrcPort {
+				// source ports do not match - it's not for this packet
+				probe.NATID = uint16(innerUDP.SrcPort)
+			}
 			if innerIP.Length != sentIP.Length {
 				// different length, not our packet
 				continue
@@ -312,7 +309,6 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
 			probe.Name = rpu.Addr.String() // TODO compute this field
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
-			// probe.NATID = NATID // TODO implement NAT detection for IPv6
 			probe.ZeroTTLForwardingBug = (innerIP.HopLimit == 0)
 			probe.Received = &results.Packet{
 				Timestamp: rpu.Timestamp,
