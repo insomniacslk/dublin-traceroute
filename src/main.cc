@@ -19,7 +19,7 @@
 #define DEFAULT_OUTPUT_FILE	"trace.json"
 
 
-const char *shortopts = "hvs:d:n:t:T:D:bo:";
+const char *shortopts = "hvs:d:n:t:T:D:bio:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -30,6 +30,7 @@ const struct option longopts[] = {
 	{"max-ttl", required_argument, NULL, 'T'},
 	{"delay", required_argument, NULL, 'D'},
 	{"broken-nat", no_argument, NULL, 'b'},
+	{"iterate-sport", no_argument, NULL, 'i'},
 	{"output-file", required_argument, NULL, 'o'},
 	{NULL, 0, NULL, 0},
 };
@@ -47,6 +48,7 @@ Usage:
                              [--max-ttl=max_ttl]
                              [--delay=delay_in_ms]
                              [--broken-nat]
+							 [--iterate-sport]
                              [--output-file=file_name]
                              [--help]
                              [--version]
@@ -61,6 +63,7 @@ Options:
   -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
   -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
+  -i --iterate-sport            iterate the source port instead of the destination port
   -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
 
 
@@ -81,6 +84,7 @@ main(int argc, char **argv) {
 	long	max_ttl = DublinTraceroute::default_max_ttl;
 	long	delay = DublinTraceroute::default_delay;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
+	bool	iterate_sport = DublinTraceroute::default_iterate_sport;
 	std::string	output_file = DEFAULT_OUTPUT_FILE;
 
 	if (geteuid() == 0) {
@@ -128,6 +132,9 @@ main(int argc, char **argv) {
 				break;
 			case 'b':
 				broken_nat = true;
+				break;
+			case 'i':
+				iterate_sport = true;
 				break;
 			case 'o':
 				output_file.assign(optarg);
@@ -192,13 +199,21 @@ main(int argc, char **argv) {
 			min_ttl,
 			max_ttl,
 			delay,
-			broken_nat
+			broken_nat,
+			iterate_sport
 	);
-	std::cout
-		<< "Traceroute from 0.0.0.0:" << Dublin.srcport()
-		<< " to " << Dublin.dst()
-		<< ":" << Dublin.dstport() << "~" << (Dublin.dstport() + npaths - 1)
-		<< " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
+	
+	std::cout << "Traceroute from 0.0.0.0:" << Dublin.srcport();
+	if(iterate_sport == 1){
+		std::cout << "~" << (Dublin.srcport() + npaths - 1);
+	}
+	
+	std::cout << " to " << Dublin.dst() << ":" << Dublin.dstport();
+	if(iterate_sport == 0){
+		std::cout << "~" << (Dublin.dstport() + npaths - 1);
+	}
+	
+	std::cout << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
 		<< ", min TTL is " << min_ttl
 		<< ", max TTL is " << max_ttl
 		<< ", delay is " << delay << " ms"

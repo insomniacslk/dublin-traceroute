@@ -190,8 +190,12 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 
 	std::shared_ptr<flow_map_t> flows(new flow_map_t);
 
+	uint16_t iterated_port = dstport();
+	if(iterate_sport()) iterated_port = srcport();
+	uint16_t end_port = iterated_port + npaths();
+
 	// forge the packets to send
-	for (uint16_t dport = dstport(); dport < dstport() + npaths(); dport++) {
+	for (iterated_port; iterated_port < end_port; iterated_port++) {
 		/* Forge the packets to send and append them to the packets
 		 * vector.
 		 * To force a packet through the same network flow, it has to
@@ -211,8 +215,16 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 		 	 * Adjust the payload for each flow to obtain the same UDP
 		 	 * checksum. The UDP checksum is used to identify the flow.
 		 	 */
-			UDPv4Probe probe(target(), dport, srcport(), ttl);
-			auto packet = probe.send();
+			
+			UDPv4Probe *probe = NULL;
+			if(iterate_sport()){
+				probe = new UDPv4Probe(target(), dstport(), iterated_port, ttl);
+			}
+			else{
+				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl);
+				//UDPv4Probe probe(target(), dport, srcport(), ttl);	
+			}
+			auto packet = probe->send();
 			auto now = Tins::Timestamp::current_time();
 
 			try {
@@ -222,17 +234,17 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 				hops.push_back(hop);
 			} catch (std::runtime_error e) {
 				std::stringstream ss;
-				ss << "Cannot find flow: " << dport << ": " << e.what();
+				ss << "Cannot find flow: " << iterated_port << ": " << e.what();
 				throw DublinTracerouteException(ss.str());
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(delay()));
 		}
-		flows->insert(std::make_pair(dport, std::make_shared<Hops>(hops)));
+		flows->insert(std::make_pair(iterated_port, std::make_shared<Hops>(hops)));
 	}
 
 	listener_thread.join();
 
-	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat());
+	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat(), iterate_sport());
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);

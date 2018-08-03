@@ -21,8 +21,8 @@
 #include "dublintraceroute/icmp_messages.h"
 
 
-TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl = 1, const bool broken_nat = true):
-		flows_(flows), min_ttl(min_ttl), compressed_(false), broken_nat_(broken_nat) {
+TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl = 1, const bool broken_nat = true, const bool iterate_sport = true):
+		flows_(flows), min_ttl(min_ttl), compressed_(false), broken_nat_(broken_nat), iterate_sport_(iterate_sport) {
 }
 
 
@@ -64,8 +64,13 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 	}
 
 	// Try to match the received packet against the sent packets. The flow
-	// is identified by the UDP destination port
+	// is identified by the UDP destination port in the case of iterate_sport is set to false
+	// if iterate_sport is set to true the source port is used to identify the flow
 	auto flow_id = inner_udp.dport();
+	if(iterate_sport_){
+		flow_id = inner_udp.sport();
+	}
+
 	std::shared_ptr<Hops> hops;
 	try {
 		hops = flows().at(flow_id);
