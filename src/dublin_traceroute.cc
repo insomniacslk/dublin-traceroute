@@ -191,7 +191,7 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	std::shared_ptr<flow_map_t> flows(new flow_map_t);
 
 	uint16_t iterated_port = dstport();
-	if(iterate_sport()) iterated_port = srcport();
+	if(use_srcport_for_path_generation()) iterated_port = srcport();
 	uint16_t end_port = iterated_port + npaths();
 
 	// forge the packets to send
@@ -217,7 +217,7 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 		 	 */
 			
 			UDPv4Probe *probe = NULL;
-			if(iterate_sport()){
+			if(use_srcport_for_path_generation()){
 				probe = new UDPv4Probe(target(), dstport(), iterated_port, ttl);
 			}
 			else{
@@ -244,7 +244,7 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 
 	listener_thread.join();
 
-	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat(), iterate_sport());
+	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat(), use_srcport_for_path_generation());
 
 	match_sniffed_packets(*results);
 	match_hostnames(*results, flows);

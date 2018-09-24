@@ -30,10 +30,10 @@ private:
 	uint8_t min_ttl = 1;
 	bool compressed_;
 	bool broken_nat_;
-	bool iterate_sport_;
+	bool use_srcport_for_path_generation_;
 
 public:
-	TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl /* = 1 */, const bool broken_nat /* = false */, const bool iterate_sport /* = false */);
+	TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl /* = 1 */, const bool broken_nat /* = false */, const bool use_srcport_for_path_generation /* = false */);
 	~TracerouteResults() { };
 	inline flow_map_t &flows() { return *flows_; }
 	std::shared_ptr<IP> match_packet(const Packet &packet);
