@@ -48,7 +48,8 @@ private:
 				 min_ttl_,
 				 max_ttl_;
 	const uint16_t		 delay_;
-	const bool		 broken_nat_;
+	const bool		 broken_nat_,
+				 use_srcport_for_path_generation_;
 	std::mutex		 mutex_tracerouting,
 				 mutex_sniffed_packets;
 	IPv4Address		 my_address;
@@ -63,6 +64,7 @@ public:
 	static const uint8_t	 default_max_ttl = 30;
 	static const uint16_t	 default_delay = 10;
 	static const bool	 default_broken_nat = false;
+	static const bool	 default_use_srcport_for_path_generation = false;
 	DublinTraceroute(
 			const std::string &dst,
 			const uint16_t srcport = default_srcport,
@@ -71,7 +73,8 @@ public:
 			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
 			const uint16_t delay = default_delay,
-			const bool broken_nat = default_broken_nat
+			const bool broken_nat = default_broken_nat,
+			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation
 			):
 				srcport_(srcport),
 				dstport_(dstport),
@@ -80,7 +83,8 @@ public:
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
 				delay_(delay),
-				broken_nat_(broken_nat)
+				broken_nat_(broken_nat),
+				use_srcport_for_path_generation_(use_srcport_for_path_generation)
 	{ validate_arguments(); }
 	DublinTraceroute(
 			const char *dst,
@@ -90,7 +94,8 @@ public:
 			const uint8_t min_ttl = default_min_ttl,
 			const uint8_t max_ttl = default_max_ttl,
 			const uint16_t delay = default_delay,
-			const bool broken_nat = default_broken_nat
+			const bool broken_nat = default_broken_nat,
+			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation
 		       ):
 				srcport_(srcport),
 				dstport_(dstport),
@@ -99,7 +104,8 @@ public:
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
 				delay_(delay),
-				broken_nat_(broken_nat)
+				broken_nat_(broken_nat),
+				use_srcport_for_path_generation_(use_srcport_for_path_generation)
 	{ validate_arguments(); }
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
@@ -110,7 +116,8 @@ public:
 		min_ttl_(source.min_ttl_),
 		max_ttl_(source.max_ttl_),
 		delay_(source.delay_),
-		broken_nat_(source.broken_nat_)
+		broken_nat_(source.broken_nat_),
+		use_srcport_for_path_generation_(source.use_srcport_for_path_generation_)
 	{ validate_arguments(); }
 
 	inline const uint16_t srcport() const { return srcport_; }
@@ -120,6 +127,7 @@ public:
 	inline const uint8_t max_ttl() const { return max_ttl_; }
 	inline const uint16_t delay() const { return delay_; }
 	inline const bool broken_nat() const { return broken_nat_; }
+	inline const bool use_srcport_for_path_generation() const { return use_srcport_for_path_generation_; }
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
 	void target(const IPv4Address &addr) { target_ = addr; }

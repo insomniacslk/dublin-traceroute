@@ -19,7 +19,7 @@
 #define DEFAULT_OUTPUT_FILE	"trace.json"
 
 
-const char *shortopts = "hvs:d:n:t:T:D:bo:";
+const char *shortopts = "hvs:d:n:t:T:D:bio:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -30,6 +30,7 @@ const struct option longopts[] = {
 	{"max-ttl", required_argument, NULL, 'T'},
 	{"delay", required_argument, NULL, 'D'},
 	{"broken-nat", no_argument, NULL, 'b'},
+	{"use-srcport", no_argument, NULL, 'i'},
 	{"output-file", required_argument, NULL, 'o'},
 	{NULL, 0, NULL, 0},
 };
@@ -40,13 +41,14 @@ static void usage() {
 R"(Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
-  dublin-traceroute <target> [--sport=SRC_PORT]
+  dublin-traceroute <target> [--sport=src_base_port]
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
                              [--min-ttl=min_ttl]
                              [--max-ttl=max_ttl]
                              [--delay=delay_in_ms]
                              [--broken-nat]
+                             [--use-srcport]
                              [--output-file=file_name]
                              [--help]
                              [--version]
@@ -61,6 +63,7 @@ Options:
   -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
   -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
+  -i --use-srcport              generate paths using source port instead of destination port
   -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
 
 
@@ -81,6 +84,7 @@ main(int argc, char **argv) {
 	long	max_ttl = DublinTraceroute::default_max_ttl;
 	long	delay = DublinTraceroute::default_delay;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
+	bool	use_srcport_for_path_generation = DublinTraceroute::default_use_srcport_for_path_generation;
 	std::string	output_file = DEFAULT_OUTPUT_FILE;
 
 	if (geteuid() == 0) {
@@ -128,6 +132,9 @@ main(int argc, char **argv) {
 				break;
 			case 'b':
 				broken_nat = true;
+				break;
+			case 'i':
+				use_srcport_for_path_generation = true;
 				break;
 			case 'o':
 				output_file.assign(optarg);
@@ -192,13 +199,21 @@ main(int argc, char **argv) {
 			min_ttl,
 			max_ttl,
 			delay,
-			broken_nat
+			broken_nat,
+			use_srcport_for_path_generation
 	);
-	std::cout
-		<< "Traceroute from 0.0.0.0:" << Dublin.srcport()
-		<< " to " << Dublin.dst()
-		<< ":" << Dublin.dstport() << "~" << (Dublin.dstport() + npaths - 1)
-		<< " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
+	
+	std::cout << "Traceroute from 0.0.0.0:" << Dublin.srcport();
+	if(use_srcport_for_path_generation == 1){
+		std::cout << "~" << (Dublin.srcport() + npaths - 1);
+	}
+	
+	std::cout << " to " << Dublin.dst() << ":" << Dublin.dstport();
+	if(use_srcport_for_path_generation == 0){
+		std::cout << "~" << (Dublin.dstport() + npaths - 1);
+	}
+	
+	std::cout << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
 		<< ", min TTL is " << min_ttl
 		<< ", max TTL is " << max_ttl
 		<< ", delay is " << delay << " ms"
