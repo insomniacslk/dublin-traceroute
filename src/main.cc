@@ -180,9 +180,16 @@ main(int argc, char **argv) {
 		std::cerr << "Min TTL must be smaller or equal than max TTL" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
-	if (dport + npaths - 1 > 65535) {
-		std::cerr << "Destination port + number of paths must not exceed 65535" << std::endl;
-		std::exit(EXIT_FAILURE);
+	if (use_srcport_for_path_generation) {
+		if (sport + npaths - 1 > 65535) {
+			std::cerr << "Source port + number of paths must not exceed 65535" << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+	} else {
+		if (dport + npaths - 1 > 65535) {
+			std::cerr << "Destination port + number of paths must not exceed 65535" << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
 	}
 	if (delay < 0 || delay > 1000) {
 		std::cerr << "The inter-packet delay must be a number between 0 and 1000 milliseconds" << std::endl;
