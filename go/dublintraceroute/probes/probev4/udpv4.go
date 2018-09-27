@@ -18,14 +18,15 @@ import (
 
 // UDPv4 is a probe type based on IPv4 and UDP
 type UDPv4 struct {
-	Target   net.IP
-	SrcPort  uint16
-	DstPort  uint16
-	NumPaths uint16
-	MinTTL   uint8
-	MaxTTL   uint8
-	Delay    time.Duration
-	Timeout  time.Duration
+	Target     net.IP
+	SrcPort    uint16
+	DstPort    uint16
+	UseSrcPort bool
+	NumPaths   uint16
+	MinTTL     uint8
+	MaxTTL     uint8
+	Delay      time.Duration
+	Timeout    time.Duration
 	// TODO implement broken nat detection
 	BrokenNAT bool
 }
@@ -55,8 +56,14 @@ func (d *UDPv4) Validate() error {
 	if d.NumPaths == 0 {
 		return errors.New("Number of paths must be a positive integer")
 	}
-	if d.DstPort+d.NumPaths > 0xffff {
-		return errors.New("Destination port plus number of paths cannot exceed 65535")
+	if d.UseSrcPort {
+		if d.SrcPort+d.NumPaths > 0xffff {
+			return errors.New("Source port plus number of paths cannot exceed 65535")
+		}
+	} else {
+		if d.DstPort+d.NumPaths > 0xffff {
+			return errors.New("Destination port plus number of paths cannot exceed 65535")
+		}
 	}
 	if d.MinTTL == 0 {
 		return errors.New("Minimum TTL must be a positive integer")
@@ -78,6 +85,13 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 	}
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{ComputeChecksums: true, FixLengths: true}
+	var basePort uint16
+	if d.UseSrcPort {
+		basePort = d.SrcPort
+	} else {
+		basePort = d.DstPort
+	}
+	var srcPort, dstPort uint16
 	for ttl := d.MinTTL; ttl <= d.MaxTTL; ttl++ {
 		ip := layers.IPv4{
 			Version:  4,
@@ -87,9 +101,16 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 			Flags:    layers.IPv4DontFragment,
 			Protocol: layers.IPProtocolUDP,
 		}
-		for dstPort := d.DstPort; dstPort < d.DstPort+d.NumPaths; dstPort++ {
+		for port := basePort; port < basePort+d.NumPaths; port++ {
+			if d.UseSrcPort {
+				srcPort = port
+				dstPort = d.DstPort
+			} else {
+				srcPort = d.SrcPort
+				dstPort = port
+			}
 			udp := layers.UDP{
-				SrcPort: layers.UDPPort(d.SrcPort),
+				SrcPort: layers.UDPPort(srcPort),
 				DstPort: layers.UDPPort(dstPort),
 			}
 			udp.SetNetworkLayerForChecksum(&ip)
@@ -97,7 +118,7 @@ func (d UDPv4) ForgePackets() []gopacket.Packet {
 			// forge the payload. The last two bytes will be adjusted to have a
 			// predictable checksum for NAT detection
 			payload := []byte{'N', 'S', 'M', 'N', 'C'}
-			id := dstPort + uint16(ttl)
+			id := port + uint16(ttl)
 			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
 
 			// serialize once to compute the UDP checksum, that will be used as
@@ -244,7 +265,12 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				},
 			},
 		}
-		flowID := uint16(sentUDP.DstPort)
+		var flowID uint16
+		if d.UseSrcPort {
+			flowID = uint16(sentUDP.SrcPort)
+		} else {
+			flowID = uint16(sentUDP.DstPort)
+		}
 		for _, rp := range received {
 			rpu := rp.(*ProbeResponseUDPv4)
 			icmp, err := rpu.ICMPv4Layer()
