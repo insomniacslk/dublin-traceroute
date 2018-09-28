@@ -35,6 +35,7 @@ type args struct {
 	version    bool
 	target     string
 	sport      int
+	useSrcport bool
 	dport      int
 	npaths     int
 	minTTL     int
@@ -98,6 +99,7 @@ func init() {
 	// Args holds the program's arguments as parsed by `flag`
 	flag.BoolVar(&Args.version, "version", false, "Print version and exit")
 	flag.IntVar(&Args.sport, "sport", DefaultSourcePort, "Set the base source port")
+	flag.BoolVar(&Args.useSrcport, "use-srcport", false, "Generate paths iterating on the source port instead of the destination port")
 	flag.IntVar(&Args.dport, "dport", DefaultDestPort, "Set the base destination port")
 	flag.IntVar(&Args.npaths, "npaths", DefaultNumPaths, "Set the number of paths to probe")
 	flag.IntVar(&Args.minTTL, "min-ttl", DefaultMinTTL, "Set the minimum TTL")
@@ -133,6 +135,7 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Target                : %v\n", target)
 	fmt.Fprintf(os.Stderr, "Base source port      : %v\n", Args.sport)
 	fmt.Fprintf(os.Stderr, "Base destination port : %v\n", Args.dport)
+	fmt.Fprintf(os.Stderr, "Use srcport for paths : %v\n", Args.useSrcport)
 	fmt.Fprintf(os.Stderr, "Number of paths       : %v\n", Args.npaths)
 	fmt.Fprintf(os.Stderr, "Minimum TTL           : %v\n", Args.minTTL)
 	fmt.Fprintf(os.Stderr, "Maximum TTL           : %v\n", Args.maxTTL)
@@ -143,21 +146,23 @@ func main() {
 	var dt dublintraceroute.DublinTraceroute
 	if Args.v4 {
 		dt = &probev4.UDPv4{
-			Target:    target,
-			SrcPort:   uint16(Args.sport),
-			DstPort:   uint16(Args.dport),
-			NumPaths:  uint16(Args.npaths),
-			MinTTL:    uint8(Args.minTTL),
-			MaxTTL:    uint8(Args.maxTTL),
-			Delay:     time.Duration(Args.delay) * time.Millisecond,
-			Timeout:   DefaultReadTimeout,
-			BrokenNAT: Args.brokenNAT,
+			Target:     target,
+			SrcPort:    uint16(Args.sport),
+			DstPort:    uint16(Args.dport),
+			UseSrcPort: Args.useSrcport,
+			NumPaths:   uint16(Args.npaths),
+			MinTTL:     uint8(Args.minTTL),
+			MaxTTL:     uint8(Args.maxTTL),
+			Delay:      time.Duration(Args.delay) * time.Millisecond,
+			Timeout:    DefaultReadTimeout,
+			BrokenNAT:  Args.brokenNAT,
 		}
 	} else {
 		dt = &probev6.UDPv6{
 			Target:      target,
 			SrcPort:     uint16(Args.sport),
 			DstPort:     uint16(Args.dport),
+			UseSrcPort:  Args.useSrcport,
 			NumPaths:    uint16(Args.npaths),
 			MinHopLimit: uint8(Args.minTTL),
 			MaxHopLimit: uint8(Args.maxTTL),

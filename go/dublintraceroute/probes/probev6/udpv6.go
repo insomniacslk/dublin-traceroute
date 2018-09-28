@@ -22,6 +22,7 @@ type UDPv6 struct {
 	Target      net.IP
 	SrcPort     uint16
 	DstPort     uint16
+	UseSrcPort  bool
 	NumPaths    uint16
 	MinHopLimit uint8
 	MaxHopLimit uint8
@@ -36,8 +37,14 @@ func (d *UDPv6) Validate() error {
 	if d.Target.To16() == nil {
 		return errors.New("Invalid IPv6 address")
 	}
-	if d.DstPort+d.NumPaths > 0xffff {
-		return errors.New("Destination port plus number of paths cannot exceed 65535")
+	if d.UseSrcPort {
+		if d.SrcPort+d.NumPaths > 0xffff {
+			return errors.New("Source port plus number of paths cannot exceed 65535")
+		}
+	} else {
+		if d.DstPort+d.NumPaths > 0xffff {
+			return errors.New("Destination port plus number of paths cannot exceed 65535")
+		}
 	}
 	if d.MaxHopLimit < d.MinHopLimit {
 		return errors.New("Invalid maximum Hop Limit, must be greater or equal than minimum Hop Limit")
@@ -53,6 +60,13 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 	packets := make([]gopacket.Packet, 0)
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{ComputeChecksums: true}
+	var basePort uint16
+	if d.UseSrcPort {
+		basePort = d.SrcPort
+	} else {
+		basePort = d.DstPort
+	}
+	var srcPort, dstPort uint16
 	for hopLimit := d.MinHopLimit; hopLimit <= d.MaxHopLimit; hopLimit++ {
 		ip := layers.IPv6{
 			Version:    6,
@@ -61,9 +75,16 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			HopLimit:   hopLimit,
 			NextHeader: layers.IPProtocolUDP,
 		}
-		for dstPort := d.DstPort; dstPort <= d.DstPort+d.NumPaths-1; dstPort++ {
+		for port := basePort; port <= basePort+d.NumPaths-1; port++ {
+			if d.UseSrcPort {
+				srcPort = port
+				dstPort = d.DstPort
+			} else {
+				srcPort = d.SrcPort
+				dstPort = port
+			}
 			udp := layers.UDP{
-				SrcPort: layers.UDPPort(d.SrcPort),
+				SrcPort: layers.UDPPort(srcPort),
 				DstPort: layers.UDPPort(dstPort),
 			}
 			udp.SetNetworkLayerForChecksum(&ip)
@@ -86,7 +107,12 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			// length is 13 for the first flow, 14 for the second, etc.
 			// 13 is given by 8 (udp header length) + 5 (magic string
 			// length, "NSMNC")
-			length := 5 + dstPort - d.DstPort
+			var length uint16
+			if d.UseSrcPort {
+				length = 5 + srcPort - d.SrcPort
+			} else {
+				length = 5 + dstPort - d.DstPort
+			}
 			// 5 is the length of the magic string "NSMNC"
 			repeat := int(length / 5)
 			if repeat%5 > 0 {
@@ -185,7 +211,7 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 		select {
 		default:
 			// TODO tune data size
-			data := make([]byte, 1024)
+			data := make([]byte, 4096)
 			now := time.Now()
 			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
 			n, addr, err := conn.ReadFrom(data)
@@ -240,7 +266,12 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				},
 			},
 		}
-		flowID := uint16(sentUDP.DstPort)
+		var flowID uint16
+		if d.UseSrcPort {
+			flowID = uint16(sentUDP.SrcPort)
+		} else {
+			flowID = uint16(sentUDP.DstPort)
+		}
 		for _, rp := range received {
 			rpu := rp.(*ProbeResponseUDPv6)
 			icmp, err := rpu.ICMPv6Layer()
