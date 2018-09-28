@@ -107,11 +107,11 @@ func (d UDPv6) ForgePackets() []gopacket.Packet {
 			// length is 13 for the first flow, 14 for the second, etc.
 			// 13 is given by 8 (udp header length) + 5 (magic string
 			// length, "NSMNC")
-			length := uint16(len("NSMNC"))
+			var length uint16
 			if d.UseSrcPort {
-				length += srcPort - d.SrcPort
+				length = 5 + srcPort - d.SrcPort
 			} else {
-				length += dstPort - d.DstPort
+				length = 5 + dstPort - d.DstPort
 			}
 			// 5 is the length of the magic string "NSMNC"
 			repeat := int(length / 5)
