@@ -9,8 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 	"golang.org/x/net/icmp"
@@ -31,19 +30,15 @@ type UDPv4 struct {
 	BrokenNAT bool
 }
 
-func computeFlowhash(p gopacket.Packet) (uint16, error) {
-	if len(p.Layers()) < 2 ||
-		p.Layers()[0].LayerType() != layers.LayerTypeIPv4 ||
-		p.Layers()[1].LayerType() != layers.LayerTypeUDP {
-		return 0, errors.New("Cannot compute flow hash: required a packet with IP and UDP layers")
+func computeFlowhash(p *ProbeResponseUDPv4) (uint16, error) {
+	if err := p.Validate(); err != nil {
+		return 0, err
 	}
-	ip := p.Layers()[0].(*layers.IPv4)
-	udp := p.Layers()[1].(*layers.UDP)
 	var flowhash uint16
-	flowhash += uint16(ip.TOS) + uint16(ip.Protocol)
-	flowhash += binary.BigEndian.Uint16(ip.SrcIP.To4()[:2]) + binary.BigEndian.Uint16(ip.SrcIP.To4()[2:4])
-	flowhash += binary.BigEndian.Uint16(ip.DstIP.To4()[:2]) + binary.BigEndian.Uint16(ip.DstIP.To4()[2:4])
-	flowhash += uint16(udp.SrcPort) + uint16(udp.DstPort)
+	flowhash += uint16(p.InnerIP().DiffServ) + uint16(p.InnerIP().Proto)
+	flowhash += binary.BigEndian.Uint16(p.InnerIP().Src.To4()[:2]) + binary.BigEndian.Uint16(p.InnerIP().Src.To4()[2:4])
+	flowhash += binary.BigEndian.Uint16(p.InnerIP().Dst.To4()[:2]) + binary.BigEndian.Uint16(p.InnerIP().Dst.To4()[2:4])
+	flowhash += uint16(p.InnerUDP().Src) + uint16(p.InnerUDP().Dst)
 	return flowhash, nil
 }
 
@@ -77,72 +72,93 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
-// ForgePackets returns a list of packets that will be sent as probes
-func (d UDPv4) ForgePackets() []gopacket.Packet {
-	packets := make([]gopacket.Packet, 0)
-	if d.NumPaths == 0 {
-		return packets
-	}
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{ComputeChecksums: true, FixLengths: true}
-	var basePort uint16
+// Packet generates a probe packet and returns it as bytes.
+func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]byte, error) {
+	// forge the payload. The last two bytes will be adjusted to have a
+	// predictable checksum for NAT detection
+	payload := []byte("NSMNC\x00\x00\x00")
+	id := uint16(ttl)
 	if d.UseSrcPort {
-		basePort = d.SrcPort
+		id += srcport
 	} else {
-		basePort = d.DstPort
+		id += dstport
 	}
-	var srcPort, dstPort uint16
-	for ttl := d.MinTTL; ttl <= d.MaxTTL; ttl++ {
-		ip := layers.IPv4{
-			Version:  4,
-			SrcIP:    net.IPv4zero,
-			DstIP:    d.Target,
-			TTL:      ttl,
-			Flags:    layers.IPv4DontFragment,
-			Protocol: layers.IPProtocolUDP,
-		}
-		for port := basePort; port < basePort+d.NumPaths; port++ {
-			if d.UseSrcPort {
-				srcPort = port
-				dstPort = d.DstPort
-			} else {
-				srcPort = d.SrcPort
-				dstPort = port
-			}
-			udp := layers.UDP{
-				SrcPort: layers.UDPPort(srcPort),
-				DstPort: layers.UDPPort(dstPort),
-			}
-			udp.SetNetworkLayerForChecksum(&ip)
+	payload[6] = byte((id >> 8) & 0xff)
+	payload[7] = byte(id & 0xff)
 
-			// forge the payload. The last two bytes will be adjusted to have a
-			// predictable checksum for NAT detection
-			payload := []byte{'N', 'S', 'M', 'N', 'C'}
-			id := port + uint16(ttl)
-			payload = append(payload, byte(id&0xff), byte((id>>8)&0xff))
-
-			// serialize once to compute the UDP checksum, that will be used as
-			// IP ID in order to detect NATs
-			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
-			p := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv4, gopacket.Lazy)
-			// TODO check if p.ErrorLayer() != nil
-			// extract the UDP checksum and assign it to the IP ID, will be used
-			// to keep track of NATs
-			u := p.TransportLayer().(*layers.UDP)
-			ip.Id = u.Checksum
-			// serialize the packet again after manipulating the IP ID
-			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
-			p = gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv4, gopacket.Lazy)
-			// TODO check if p.ErrorLayer() != nil
-			packets = append(packets, p)
-		}
+	udph := inet.UDP{
+		Src: srcport,
+		Dst: dstport,
 	}
-	return packets
+	iph := inet.IPv4{
+		Flags: inet.DontFragment,
+		TTL:   int(ttl),
+		Proto: inet.ProtoUDP,
+		Src:   src,
+		Dst:   dst,
+	}
+	iph.SetNext(&udph)
+	udph.SetPrev(&iph)
+	udph.SetNext(&inet.Raw{Data: payload})
+	udpb, err := udph.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	// deserialize the stream to get the computed checksum, to use for the IP ID
+	tmp, err := inet.NewUDP(udpb)
+	if err != nil {
+		return nil, err
+	}
+	iph.ID = int(tmp.Csum)
+	return iph.Marshal()
+}
+
+type pkt struct {
+	Data []byte
+	Port int
+}
+
+// Packets returns a channel of packets that will be sent as probes
+func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
+	numPackets := int(d.NumPaths) * int(d.MaxTTL-d.MinTTL)
+	ret := make(chan pkt, numPackets)
+
+	go func() {
+		var (
+			srcPort, dstPort, basePort uint16
+		)
+		if d.UseSrcPort {
+			basePort = d.SrcPort
+		} else {
+			basePort = d.DstPort
+		}
+		for ttl := d.MinTTL; ttl <= d.MaxTTL; ttl++ {
+			for port := basePort; port < basePort+d.NumPaths; port++ {
+				if d.UseSrcPort {
+					srcPort = port
+					dstPort = d.DstPort
+				} else {
+					srcPort = d.SrcPort
+					dstPort = port
+				}
+				packet, err := d.packet(ttl, src, dst, srcPort, dstPort)
+				if err != nil {
+					log.Printf("Warning: cannot generate packet for ttl=%d srcport=%d dstport=%d: %v",
+						ttl, srcPort, dstPort, err,
+					)
+				} else {
+					ret <- pkt{Data: packet, Port: int(dstPort)}
+				}
+			}
+		}
+		close(ret)
+	}()
+	return ret
 }
 
 // SendReceive sends all the packets to the target address, respecting the configured
 // inter-packet delay
-func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.ProbeResponse, error) {
+func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
 		return nil, nil, err
@@ -156,11 +172,13 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	var daddrBytes [net.IPv4len]byte
 	copy(daddrBytes[:], d.Target.To4())
 
+	numPackets := int(d.NumPaths) * int(d.MaxTTL-d.MinTTL)
+
 	// spawn the listener
 	recvErrors := make(chan error)
 	recvChan := make(chan []probes.ProbeResponse, 1)
 	go func(errch chan error, rc chan []probes.ProbeResponse) {
-		howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
+		howLong := d.Delay*time.Duration(numPackets) + d.Timeout
 		received, err := d.ListenFor(howLong)
 		errch <- err
 		// TODO pass the rp chan to ListenFor and let it feed packets there
@@ -174,16 +192,16 @@ func (d UDPv4) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	}
 	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
 	conn.Close()
-	sent := make([]probes.Probe, 0, len(packets))
-	for _, p := range packets {
+	sent := make([]probes.Probe, 0, numPackets)
+	for p := range d.packets(localAddr.IP, d.Target) {
 		daddr := syscall.SockaddrInet4{
 			Addr: daddrBytes,
-			Port: int(p.TransportLayer().(*layers.UDP).DstPort),
+			Port: p.Port,
 		}
-		if err = syscall.Sendto(fd, p.Data(), 0, &daddr); err != nil {
+		if err = syscall.Sendto(fd, p.Data, 0, &daddr); err != nil {
 			return nil, nil, err
 		}
-		sent = append(sent, &ProbeUDPv4{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
+		sent = append(sent, &ProbeUDPv4{Data: p.Data, LocalAddr: localAddr.IP, Timestamp: time.Now()})
 		time.Sleep(d.Delay)
 	}
 	if err = <-recvErrors; err != nil {
@@ -221,9 +239,8 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 					return nil, err
 				}
 			}
-			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv4, gopacket.Lazy)
 			packets = append(packets, &ProbeResponseUDPv4{
-				Packet:    p,
+				Data:      data[:n],
 				Addr:      (*(addr).(*net.IPAddr)).IP,
 				Timestamp: now,
 			})
@@ -241,87 +258,86 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 
 	for _, sp := range sent {
 		spu := sp.(*ProbeUDPv4)
-		sentIP, err := spu.IPv4Layer()
-		if err != nil {
-			log.Printf("Error getting IPv4 layer in sent packet: %v", err)
+		if err := spu.Validate(); err != nil {
+			log.Printf("Invalid probe: %v", err)
 			continue
 		}
-		sentUDP, err := spu.UDPLayer()
-		if err != nil {
-			log.Printf("Error getting UDP layer in sent packet: %v", err)
-			continue
-		}
+		sentIP := spu.IP()
+		sentUDP := spu.UDP()
 		probe := results.Probe{
 			Sent: results.Packet{
 				Timestamp: spu.Timestamp,
 				IP: results.IP{
-					SrcIP: spu.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP,
-					DstIP: sentIP.DstIP,
-					TTL:   sentIP.TTL,
+					SrcIP: spu.LocalAddr,
+					DstIP: sentIP.Dst,
+					TTL:   uint8(sentIP.TTL),
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(sentUDP.SrcPort),
-					DstPort: uint16(sentUDP.DstPort),
+					SrcPort: uint16(sentUDP.Src),
+					DstPort: uint16(sentUDP.Dst),
 				},
 			},
 		}
 		var flowID uint16
 		if d.UseSrcPort {
-			flowID = uint16(sentUDP.SrcPort)
+			flowID = uint16(sentUDP.Src)
 		} else {
-			flowID = uint16(sentUDP.DstPort)
+			flowID = uint16(sentUDP.Dst)
 		}
 		for _, rp := range received {
 			rpu := rp.(*ProbeResponseUDPv4)
-			icmp, err := rpu.ICMPv4Layer()
-			if err != nil {
-				log.Printf("Error getting ICMP layer in received packet: %v", err)
+			if err := rpu.Validate(); err != nil {
+				log.Printf("Invalid probe response: %v", err)
 				continue
 			}
-			if icmp.TypeCode.Type() != layers.ICMPv4TypeTimeExceeded &&
-				!(icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort) {
+			icmp := rpu.ICMP()
+			if icmp == nil {
+				log.Printf("No ICMP in probe response")
+				continue
+			}
+			if icmp.Type != inet.ICMPTimeExceeded &&
+				!(icmp.Type == inet.ICMPDestUnreachable && icmp.Code == 3) {
 				// we want time-exceeded or port-unreachable
 				log.Print("Bad ICMP type/code")
 				continue
 			}
-			innerIP, err := rpu.InnerIPv4Layer()
-			if err != nil {
-				log.Printf("Error getting inner IPv4 layer in received packet: %v", err)
+			innerIP := rpu.InnerIP()
+			if innerIP == nil {
+				log.Printf("Error getting inner IPv4 layer in received packet")
 				continue
 			}
-			if !bytes.Equal(innerIP.DstIP.To4(), d.Target.To4()) {
+			if !bytes.Equal(innerIP.Dst.To4(), d.Target.To4()) {
 				// this is not a response to any of our probes, discard it
 				continue
 			}
-			innerUDP, err := rpu.InnerUDPLayer()
-			if err != nil {
-				log.Printf("Error getting inner UDP layer in received packet: %v", err)
+			innerUDP := rpu.InnerUDP()
+			if innerUDP == nil {
+				log.Printf("Error getting inner UDP layer in received packet")
 				continue
 			}
-			if sentUDP.SrcPort != innerUDP.SrcPort || sentUDP.DstPort != innerUDP.DstPort {
-				// source and destination portdo not match - it's not for
+			if sentUDP.Src != innerUDP.Src || sentUDP.Dst != innerUDP.Dst {
+				// source and destination port do not match - it's not for
 				// this packet
 				continue
 			}
-			if innerIP.Id != sentIP.Id {
+			if innerIP.ID != sentIP.ID {
 				// the two packets do not belong to the same flow
 				continue
 			}
 			// the two packets belong to the same flow. If the checksum
 			// differ there's a NAT
-			NATID := innerUDP.Checksum - sentUDP.Checksum
+			NATID := innerUDP.Csum - sentUDP.Csum
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
-			flowhash, err := computeFlowhash(spu.Packet)
+			flowhash, err := computeFlowhash(rpu)
 			if err != nil {
 				log.Print(err)
 				continue
 			}
-			// gopacket does not export the fields with descriptions :(
 			description := "Unknown"
-			if icmp.TypeCode.Type() == layers.ICMPv4TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv4CodePort {
+			if icmp.Type == inet.ICMPDestUnreachable && icmp.Code == 3 {
 				description = "Destination port unreachable"
-			} else if icmp.TypeCode.Type() == layers.ICMPv4TypeTimeExceeded && icmp.TypeCode.Code() == layers.ICMPv4CodeTTLExceeded {
+			} else if icmp.Type == inet.ICMPTimeExceeded && icmp.Code == 0 {
 				description = "TTL expired in transit"
 			}
 			// This is our packet, let's fill the probe data up
@@ -334,9 +350,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.Received = &results.Packet{
 				Timestamp: rpu.Timestamp,
 				ICMP: results.ICMP{
-					// XXX it seems that gopacket's ICMP does not support extensions for MPLS..
-					Type:        icmp.TypeCode.Type(),
-					Code:        icmp.TypeCode.Code(),
+					Type:        uint8(icmp.Type),
+					Code:        uint8(icmp.Code),
 					Description: description,
 				},
 				IP: results.IP{
@@ -344,8 +359,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					DstIP: spu.LocalAddr,
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(innerUDP.SrcPort),
-					DstPort: uint16(innerUDP.DstPort),
+					SrcPort: uint16(innerUDP.Src),
+					DstPort: uint16(innerUDP.Dst),
 				},
 			}
 			// break, since this is a response to the sent probe
@@ -361,8 +376,7 @@ func (d UDPv4) Traceroute() (*results.Results, error) {
 	if err := d.Validate(); err != nil {
 		return nil, err
 	}
-	packets := d.ForgePackets()
-	sent, received, err := d.SendReceive(packets)
+	sent, received, err := d.SendReceive()
 	if err != nil {
 		return nil, err
 	}

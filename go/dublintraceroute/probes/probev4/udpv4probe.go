@@ -5,13 +5,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 )
 
 // ProbeUDPv4 represents a sent probe packet with its metadata
 type ProbeUDPv4 struct {
-	Packet gopacket.Packet
+	Data []byte
+	ip   *inet.IPv4
 	// time the packet is sent at
 	Timestamp time.Time
 	// local address of the packet sender
@@ -20,95 +20,104 @@ type ProbeUDPv4 struct {
 
 // Validate verifies that the probe has the expected structure, and returns an error if not
 func (p *ProbeUDPv4) Validate() error {
-	if len(p.Packet.Layers()) < 2 {
-		return errors.New("Invalid Probe: less than 2 layers found")
+	if p.ip == nil {
+		// decode packet
+		ip, err := inet.NewIPv4(p.Data)
+		if err != nil {
+			return nil
+		}
+		p.ip = ip
 	}
-	if _, ok := p.Packet.Layers()[0].(*layers.IPv4); !ok {
-		return errors.New("Invalid ProbeResponse: first layer is not IPv4")
+	l := p.ip.Next()
+	if l == nil {
+		return errors.New("IP layer has no payload")
 	}
-	if _, ok := p.Packet.Layers()[1].(*layers.UDP); !ok {
-		return errors.New("Invalid ProbeResponse: second layer is not UDP")
+	if _, ok := l.(*inet.UDP); !ok {
+		return errors.New("no UDP layer")
 	}
 	return nil
 }
 
-// IPv4Layer returns the IPv4 layer of the probe, expecting it to be the first encountered layer
-func (p *ProbeUDPv4) IPv4Layer() (*layers.IPv4, error) {
-	if err := p.Validate(); err != nil {
-		return nil, err
-	}
-	return p.Packet.Layers()[0].(*layers.IPv4), nil
+// IP returns the IP layer of the probe. If not decoded yet, will return nil.
+func (p ProbeUDPv4) IP() *inet.IPv4 {
+	return p.ip
 }
 
-// UDPLayer returns the UDP layer of the probe, expecting it to be the second encountered layer
-func (p *ProbeUDPv4) UDPLayer() (*layers.UDP, error) {
-	if err := p.Validate(); err != nil {
-		return nil, err
+// UDP returns the UDP layer of the probe. If not decoded yet, will return nil.
+func (p ProbeUDPv4) UDP() *inet.UDP {
+	if p.ip == nil {
+		return nil
 	}
-	return p.Packet.Layers()[1].(*layers.UDP), nil
+	u, ok := p.ip.Next().(*inet.UDP)
+	if !ok {
+		return nil
+	}
+	return u
 }
 
 // ProbeResponseUDPv4 represents a received probe response with its metadata
 type ProbeResponseUDPv4 struct {
-	Packet gopacket.Packet
+	Data    []byte
+	icmp    *inet.ICMP
+	innerIP *inet.IPv4
 	// time the packet is received at
 	Timestamp time.Time
 	// sender IP address
-	Addr        net.IP
-	innerPacket *gopacket.Packet
+	Addr net.IP
 }
 
 // Validate verifies that the probe response has the expected structure, and returns an error if not
 func (pr *ProbeResponseUDPv4) Validate() error {
-	if len(pr.Packet.Layers()) < 2 {
-		return errors.New("Invalid ProbeResponse: less than 2 layers found")
-	}
-	if _, ok := pr.Packet.Layers()[0].(*layers.ICMPv4); !ok {
-		return errors.New("Invalid ProbeResponse: first layer is not ICMPv4")
-	}
-	if pr.innerPacket == nil {
-		icmp := pr.Packet.Layers()[0].(*layers.ICMPv4)
-		innerPacket := gopacket.NewPacket(icmp.LayerPayload(), layers.LayerTypeIPv4, gopacket.Default)
-		if innerPacket == nil {
-			return errors.New("Invalid ProbeResponse: no inner packet found")
+	if pr.icmp == nil {
+		// decode packet
+		icmp, err := inet.NewICMP(pr.Data)
+		if err != nil {
+			return nil
 		}
-		pr.innerPacket = &innerPacket
+		pr.icmp = icmp
 	}
-	if len((*pr.innerPacket).Layers()) < 2 {
-		return errors.New("Invalid ProbeResponse: less than 2 layers in the inner packet")
+	var l inet.Layer
+	if l = pr.icmp.Next(); l == nil {
+		return errors.New("IP layer has no payload")
 	}
-	if _, ok := (*pr.innerPacket).Layers()[0].(*layers.IPv4); !ok {
-		return errors.New("Invalid ProbeResponse: first inner layer is not IPv4")
+	raw, ok := l.(*inet.Raw)
+	if !ok {
+		return errors.New("no payload in ICMP layer")
 	}
-	if _, ok := (*pr.innerPacket).Layers()[1].(*layers.UDP); !ok {
-		return errors.New("Invalid ProbeResponse: second inner layer is not UDP")
+	var ip inet.IPv4
+	ip.IPinICMP = true
+	if err := ip.Unmarshal(raw.Data); err != nil {
+		return err
+	}
+	pr.innerIP = &ip
+	l = pr.innerIP.Next()
+	if l == nil {
+		return errors.New("inner IP layer has no payload")
+	}
+	if _, ok := l.(*inet.UDP); !ok {
+		return errors.New("inner IP layer no UDP layer")
 	}
 	return nil
 }
 
-// ICMPv4Layer returns the ICMPv4 layer of the probe, expecting it to be the
-// first encountered layer
-func (pr *ProbeResponseUDPv4) ICMPv4Layer() (*layers.ICMPv4, error) {
-	if err := pr.Validate(); err != nil {
-		return nil, err
-	}
-	return pr.Packet.Layers()[0].(*layers.ICMPv4), nil
+// ICMP returns the ICMP layer of the probe response. If not decoded yet, will return nil.
+func (pr ProbeResponseUDPv4) ICMP() *inet.ICMP {
+	return pr.icmp
 }
 
-// InnerIPv4Layer returns the IP layer of the inner packet of the probe,
-// expecting it to be the first encountered layer in the inner packet
-func (pr *ProbeResponseUDPv4) InnerIPv4Layer() (*layers.IPv4, error) {
-	if err := pr.Validate(); err != nil {
-		return nil, err
-	}
-	return (*pr.innerPacket).Layers()[0].(*layers.IPv4), nil
+// InnerIP returns the inner IP layer of the probe response. If not decoded yet, will return nil.
+func (pr ProbeResponseUDPv4) InnerIP() *inet.IPv4 {
+	return pr.innerIP
 }
 
-// InnerUDPLayer returns the UDP layer of the inner packet of the probe,
-// expecting it to be the second encountered layer in the inner packet
-func (pr *ProbeResponseUDPv4) InnerUDPLayer() (*layers.UDP, error) {
-	if err := pr.Validate(); err != nil {
-		return nil, err
+// InnerUDP returns the UDP layer of the probe. If not decoded yet, will return nil.
+func (pr ProbeResponseUDPv4) InnerUDP() *inet.UDP {
+	if pr.innerIP == nil {
+		return nil
 	}
-	return (*pr.innerPacket).Layers()[1].(*layers.UDP), nil
+	u, ok := pr.innerIP.Next().(*inet.UDP)
+	if !ok {
+		return nil
+	}
+	return u
 }
