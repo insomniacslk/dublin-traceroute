@@ -1,6 +1,7 @@
 package probev4
 
 import (
+	"bytes"
 	"errors"
 	"net"
 	"time"
@@ -95,7 +96,7 @@ func (pr *ProbeResponseUDPv4) Validate() error {
 		return errors.New("inner IP layer has no payload")
 	}
 	if _, ok := l.(*inet.UDP); !ok {
-		return errors.New("inner IP layer no UDP layer")
+		return errors.New("inner IP layer has no UDP layer")
 	}
 	return nil
 }
@@ -120,4 +121,29 @@ func (pr ProbeResponseUDPv4) InnerUDP() *inet.UDP {
 		return nil
 	}
 	return u
+}
+
+// Matches returns true if this probe response matches a given probe. Both
+// probes must have been already validated with Validate, this function may
+// panic otherwise.
+func (pr ProbeResponseUDPv4) Matches(p *ProbeUDPv4) bool {
+	if p == nil {
+		return false
+	}
+	if pr.icmp.Type != inet.ICMPTimeExceeded && !(pr.icmp.Type == inet.ICMPDestUnreachable && pr.icmp.Code == 3) {
+		// we want time-exceeded or port-unreachable
+		return false
+	}
+	if !bytes.Equal(pr.InnerIP().Dst.To4(), p.IP().Dst.To4()) {
+		return false
+	}
+	if p.UDP().Src != pr.InnerUDP().Src || p.UDP().Dst != pr.InnerUDP().Dst {
+		// source and destination ports do not match
+		return false
+	}
+	if pr.InnerIP().ID != p.IP().ID {
+		// the two packets do not belong to the same flow
+		return false
+	}
+	return true
 }
