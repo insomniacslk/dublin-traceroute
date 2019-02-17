@@ -290,43 +290,13 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				log.Printf("Invalid probe response: %v", err)
 				continue
 			}
-			icmp := rpu.ICMP()
-			if icmp == nil {
-				log.Printf("No ICMP in probe response")
+			if !rpu.Matches(spu) {
 				continue
 			}
-			if icmp.Type != inet.ICMPTimeExceeded &&
-				!(icmp.Type == inet.ICMPDestUnreachable && icmp.Code == 3) {
-				// we want time-exceeded or port-unreachable
-				log.Print("Bad ICMP type/code")
-				continue
-			}
-			innerIP := rpu.InnerIP()
-			if innerIP == nil {
-				log.Printf("Error getting inner IPv4 layer in received packet")
-				continue
-			}
-			if !bytes.Equal(innerIP.Dst.To4(), d.Target.To4()) {
-				// this is not a response to any of our probes, discard it
-				continue
-			}
-			innerUDP := rpu.InnerUDP()
-			if innerUDP == nil {
-				log.Printf("Error getting inner UDP layer in received packet")
-				continue
-			}
-			if sentUDP.Src != innerUDP.Src || sentUDP.Dst != innerUDP.Dst {
-				// source and destination port do not match - it's not for
-				// this packet
-				continue
-			}
-			if innerIP.ID != sentIP.ID {
-				// the two packets do not belong to the same flow
-				continue
-			}
+
 			// the two packets belong to the same flow. If the checksum
 			// differ there's a NAT
-			NATID := innerUDP.Csum - sentUDP.Csum
+			NATID := rpu.InnerUDP().Csum - sentUDP.Csum
 			// TODO this works when the source port is fixed. Allow for variable
 			//      source port too
 			flowhash, err := computeFlowhash(rpu)
@@ -335,9 +305,9 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				continue
 			}
 			description := "Unknown"
-			if icmp.Type == inet.ICMPDestUnreachable && icmp.Code == 3 {
+			if rpu.ICMP().Type == inet.ICMPDestUnreachable && rpu.ICMP().Code == 3 {
 				description = "Destination port unreachable"
-			} else if icmp.Type == inet.ICMPTimeExceeded && icmp.Code == 0 {
+			} else if rpu.ICMP().Type == inet.ICMPTimeExceeded && rpu.ICMP().Code == 0 {
 				description = "TTL expired in transit"
 			}
 			// This is our packet, let's fill the probe data up
@@ -346,12 +316,12 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.Name = rpu.Addr.String() // TODO compute this field
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
 			probe.NATID = NATID
-			probe.ZeroTTLForwardingBug = (innerIP.TTL == 0)
+			probe.ZeroTTLForwardingBug = (rpu.InnerIP().TTL == 0)
 			probe.Received = &results.Packet{
 				Timestamp: rpu.Timestamp,
 				ICMP: results.ICMP{
-					Type:        uint8(icmp.Type),
-					Code:        uint8(icmp.Code),
+					Type:        uint8(rpu.ICMP().Type),
+					Code:        uint8(rpu.ICMP().Code),
 					Description: description,
 				},
 				IP: results.IP{
@@ -359,8 +329,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					DstIP: spu.LocalAddr,
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(innerUDP.Src),
-					DstPort: uint16(innerUDP.Dst),
+					SrcPort: uint16(rpu.InnerUDP().Src),
+					DstPort: uint16(rpu.InnerUDP().Dst),
 				},
 			}
 			// break, since this is a response to the sent probe
