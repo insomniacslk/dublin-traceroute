@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/net/icmp"
 
-	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
 )
@@ -55,86 +55,87 @@ func (d *UDPv6) Validate() error {
 	return nil
 }
 
-// ForgePackets returns a list of packets that will be sent as probes
-func (d UDPv6) ForgePackets() []gopacket.Packet {
-	packets := make([]gopacket.Packet, 0)
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{ComputeChecksums: true}
-	var basePort uint16
-	if d.UseSrcPort {
-		basePort = d.SrcPort
-	} else {
-		basePort = d.DstPort
+// packet generates a probe packet and returns its bytes
+func (d UDPv6) packet(hl uint8, src, dst net.IP, srcport, dstport uint16) ([]byte, []byte, error) {
+	// Forge the payload so that it can be used for path tracking and
+	// NAT detection.
+	//
+	// The payload length does the trick here, in a similar manner to
+	// how the IP ID is used for the IPv4 probes.
+	// In order to uniquely track a probe packet we need a unique field
+	// that:
+	// * is part of the first 1280 bytes including the ICMPv6 packet.
+	// * is not used by the ECMP hashing algorithm.
+	//
+	// The Payload Length in the IPv6 header is used for this purpose,
+	// and the payload size is tuned to represent a unique ID that
+	// will be used to identify the original probe packet carried by the
+	// ICMP response.
+
+	// Length is 13 for the first flow, 14 for the second, etc.
+	// 13 is given by 8 (udp header length) + 5 (magic string
+	// length, "NSMNC")
+	plen := 10 + int(hl)
+	magic := []byte("NSMNC")
+	// FIXME this is wrong. Or maybe not.
+	payload := bytes.Repeat(magic, plen/len(magic)+1)[:plen]
+
+	udph := inet.UDP{
+		Src: srcport,
+		Dst: dstport,
 	}
-	var srcPort, dstPort uint16
-	for hopLimit := d.MinHopLimit; hopLimit <= d.MaxHopLimit; hopLimit++ {
-		ip := layers.IPv6{
-			Version:    6,
-			SrcIP:      net.IPv6unspecified,
-			DstIP:      d.Target,
-			HopLimit:   hopLimit,
-			NextHeader: layers.IPProtocolUDP,
-		}
-		for port := basePort; port <= basePort+d.NumPaths-1; port++ {
-			if d.UseSrcPort {
-				srcPort = port
-				dstPort = d.DstPort
-			} else {
-				srcPort = d.SrcPort
-				dstPort = port
-			}
-			udp := layers.UDP{
-				SrcPort: layers.UDPPort(srcPort),
-				DstPort: layers.UDPPort(dstPort),
-			}
-			udp.SetNetworkLayerForChecksum(&ip)
-			ip.Length = 8 // UDP header size
-
-			// forge payload
-			// The payload does the trick here - in a similar manner to how the
-			// IP ID is used for the IPv4 probes.
-			// In order to uniquely track a probe packet we need a unique  field
-			// that is part of the IP header or the first 8 bytes of the above
-			// layer (UDP, TCP, whatever it is), because these are the bytes
-			// that are guaranteed to be returned by an ICMP message.
-			// This field also doesn't have to be used by the ECMP hashing
-			// algorithm. Therefore dublin-traceroute uses the Payload Length in
-			// the IPv6 header and tunes its size to represent a unique ID that
-			// will be used to identify the original probe packet carried by the
-			// ICMP response.
-			// TODO implement the above technique
-
-			// length is 13 for the first flow, 14 for the second, etc.
-			// 13 is given by 8 (udp header length) + 5 (magic string
-			// length, "NSMNC")
-			var length uint16
-			if d.UseSrcPort {
-				length = 5 + srcPort - d.SrcPort
-			} else {
-				length = 5 + dstPort - d.DstPort
-			}
-			// 5 is the length of the magic string "NSMNC"
-			repeat := int(length / 5)
-			if repeat%5 > 0 {
-				repeat++
-			}
-			// the payload length is used to identify the flow in this type
-			// of probe
-			payload := bytes.Repeat([]byte{'N', 'S', 'M', 'N', 'C'}, repeat)[:length]
-			ip.Length += uint16(len(payload))
-
-			gopacket.SerializeLayers(buf, opts, &ip, &udp, gopacket.Payload(payload))
-			p := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeIPv6, gopacket.Lazy)
-			// TODO check if p.ErrorLayer() != nil
-			packets = append(packets, p)
-		}
+	udpb, err := udph.Marshal()
+	if err != nil {
+		return nil, nil, err
 	}
-	return packets
+	return udpb, payload, nil
+}
+
+type pkt struct {
+	UDPHeader, Payload []byte
+	Src                net.IP
+	SrcPort, DstPort   int
+	HopLimit           int
+}
+
+// packets returns a channel of packets that will be sent as probes
+func (d UDPv6) packets(src, dst net.IP) <-chan pkt {
+	numPackets := int(d.NumPaths) * int(d.MaxHopLimit-d.MinHopLimit)
+	ret := make(chan pkt, numPackets)
+
+	go func() {
+		var srcPort, dstPort, basePort uint16
+		if d.UseSrcPort {
+			basePort = d.SrcPort
+		} else {
+			basePort = d.DstPort
+		}
+		for hl := d.MinHopLimit; hl <= d.MaxHopLimit; hl++ {
+			for port := basePort; port < basePort+d.NumPaths; port++ {
+				if d.UseSrcPort {
+					srcPort = port
+					dstPort = d.DstPort
+				} else {
+					srcPort = d.SrcPort
+					dstPort = port
+				}
+				udpb, payload, err := d.packet(hl, src, dst, srcPort, dstPort)
+				if err != nil {
+					log.Printf("Warning: cannot generate packet for hop limit=%d srcport=%d dstport=%d: %v", hl, srcPort, dstPort, err)
+				} else {
+					ret <- pkt{UDPHeader: udpb, Payload: payload, Src: src, SrcPort: int(srcPort), DstPort: int(dstPort), HopLimit: int(hl)}
+				}
+			}
+		}
+		close(ret)
+	}()
+	return ret
 }
 
 // SendReceive sends all the packets to the target address, respecting the
 // configured inter-packet delay
-func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.ProbeResponse, error) {
+func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
+	// FIXME close fd
 	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 	if err != nil {
 		return nil, nil, os.NewSyscallError("socket", err)
@@ -148,11 +149,13 @@ func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	var daddrBytes [net.IPv6len]byte
 	copy(daddrBytes[:], d.Target.To16())
 
+	numPackets := int(d.NumPaths) * int(d.MaxHopLimit-d.MinHopLimit)
+
 	// spawn the listener
 	recvErrors := make(chan error)
 	recvChan := make(chan []probes.ProbeResponse, 1)
 	go func(errch chan error, rc chan []probes.ProbeResponse) {
-		howLong := d.Delay*time.Duration(len(packets)) + d.Timeout
+		howLong := d.Delay*time.Duration(numPackets) + d.Timeout
 		received, err := d.ListenFor(howLong)
 		errch <- err
 		// TODO pass the rp chan to ListenFor and let it feed packets there
@@ -166,26 +169,45 @@ func (d UDPv6) SendReceive(packets []gopacket.Packet) ([]probes.Probe, []probes.
 	}
 	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
 	conn.Close()
-	sent := make([]probes.Probe, 0, len(packets))
-	for _, p := range packets {
-		// TODO set source port
-		ip := p.NetworkLayer().(*layers.IPv6)
-		udp := p.TransportLayer().(*layers.UDP)
+	sent := make([]probes.Probe, 0, numPackets)
+	bound := make(map[int]bool)
+	for p := range d.packets(localAddr.IP, d.Target) {
+		if _, ok := bound[p.SrcPort]; !ok {
+			// bind() can be called only once per path listener
+			var saddrBytes [16]byte
+			copy(saddrBytes[:], p.Src.To16())
+			sa := syscall.SockaddrInet6{
+				Addr: saddrBytes,
+				Port: int(p.SrcPort),
+			}
+			if err := syscall.Bind(fd, &sa); err != nil {
+				return nil, nil, os.NewSyscallError("bind", err)
+			}
+			bound[p.SrcPort] = true
+		}
 		daddr := syscall.SockaddrInet6{
 			Addr: daddrBytes,
-			Port: int(udp.DstPort),
+			Port: int(p.DstPort),
 		}
-		// FIXME lots of overhead here! Don't use setsockopt for each packet
-		// TODO add ancillary data via cmsg, IPV6_UNICAST_HOPS set to the
 		// desired hoplimit
-		hoplimit := ip.HopLimit
-		if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IPV6_UNICAST_HOPS, int(hoplimit)); err != nil {
+		if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IPV6_UNICAST_HOPS, p.HopLimit); err != nil {
 			return nil, nil, os.NewSyscallError("setsockopt", err)
 		}
-		if err = syscall.Sendto(fd, udp.Payload, 0, &daddr); err != nil {
+		if err = syscall.Sendto(fd, p.Payload, 0, &daddr); err != nil {
 			return nil, nil, os.NewSyscallError("sendto", err)
 		}
-		sent = append(sent, ProbeUDPv6{Packet: p, LocalAddr: localAddr.IP, Timestamp: time.Now()})
+		probe := ProbeUDPv6{
+			Data:       append(p.UDPHeader, p.Payload...),
+			LocalAddr:  localAddr.IP,
+			RemoteAddr: d.Target,
+			HopLimit:   p.HopLimit,
+			PayloadLen: len(p.UDPHeader) + len(p.Payload),
+			Timestamp:  time.Now(),
+		}
+		if err := probe.Validate(); err != nil {
+			return nil, nil, err
+		}
+		sent = append(sent, &probe)
 		time.Sleep(d.Delay)
 	}
 	if err = <-recvErrors; err != nil {
@@ -223,15 +245,13 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 					return nil, err
 				}
 			}
-			p := gopacket.NewPacket(data[:n], layers.LayerTypeICMPv6, gopacket.Lazy)
 			packets = append(packets, &ProbeResponseUDPv6{
-				Packet:    p,
+				Data:      data[:n],
 				Addr:      (*(addr).(*net.IPAddr)).IP,
 				Timestamp: now,
 			})
 		}
 	}
-
 	return packets, nil
 }
 
@@ -242,74 +262,61 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 		Flows: make(map[uint16][]results.Probe),
 	}
 	for _, sp := range sent {
-		spu := sp.(ProbeUDPv6)
-		sentIP, err := spu.IPv6Layer()
-		if err != nil {
-			log.Printf("Error getting IPv6 layer in sent packet: %v", err)
+		spu := sp.(*ProbeUDPv6)
+		if err := spu.Validate(); err != nil {
+			log.Printf("Invalid probe: %v", err)
 			continue
 		}
-		sentUDP, err := spu.UDPLayer()
-		if err != nil {
-			log.Printf("Error getting UDP layer in sent packet: %v", err)
-		}
+		sentUDP := spu.UDP()
 		probe := results.Probe{
 			Sent: results.Packet{
 				Timestamp: spu.Timestamp,
 				IP: results.IP{
-					SrcIP: spu.LocalAddr, // unfortunately gopacket does not compute sentIP.SrcIP
-					DstIP: sentIP.DstIP,
-					TTL:   sentIP.HopLimit, // TTL should be really renamed to something better..
+					SrcIP: spu.LocalAddr,
+					DstIP: spu.RemoteAddr,
+					TTL:   uint8(spu.HopLimit), // TTL should be really renamed to something better..
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(sentUDP.SrcPort),
-					DstPort: uint16(sentUDP.DstPort),
+					SrcPort: uint16(sentUDP.Src),
+					DstPort: uint16(sentUDP.Dst),
 				},
 			},
 		}
 		var flowID uint16
 		if d.UseSrcPort {
-			flowID = uint16(sentUDP.SrcPort)
+			flowID = uint16(sentUDP.Src)
 		} else {
-			flowID = uint16(sentUDP.DstPort)
+			flowID = uint16(sentUDP.Dst)
 		}
 		for _, rp := range received {
 			rpu := rp.(*ProbeResponseUDPv6)
-			icmp, err := rpu.ICMPv6Layer()
-			if err != nil {
-				log.Printf("Error getting ICMPv6 layer in received packet: %v", err)
+			if err := rpu.Validate(); err != nil {
+				log.Printf("Invalid probe response: %v", err)
 				continue
 			}
-			if icmp.TypeCode.Type() != layers.ICMPv6TypeTimeExceeded &&
-				!(icmp.TypeCode.Type() == layers.ICMPv6TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv6CodePortUnreachable) {
+			icmp := rpu.ICMPv6()
+			if icmp.Type != layers.ICMPv6TypeTimeExceeded &&
+				!(icmp.Type == layers.ICMPv6TypeDestinationUnreachable && icmp.Code == layers.ICMPv6CodePortUnreachable) {
 				// we want time-exceeded or port-unreachable
-				log.Print("Bad ICMP type/code")
 				continue
 			}
-			innerIP, err := rpu.InnerIPv6Layer()
-			if err != nil {
-				log.Printf("Error getting inner IPv6 layer in received packet: %v", err)
-				continue
-			}
+			innerIP := rpu.InnerIP()
 			// TODO check that To16() is the right thing to call here
-			if !bytes.Equal(innerIP.DstIP.To16(), d.Target.To16()) {
+			if !bytes.Equal(innerIP.Dst.To16(), d.Target.To16()) {
 				// this is not a response to any of our probes, discard it
 				continue
 			}
-			innerUDP, err := rpu.InnerUDPLayer()
-			if err != nil {
-				log.Printf("Error getting inner UDP layer in received packet: %v", err)
-				continue
-			}
-			if sentUDP.DstPort != innerUDP.DstPort {
+			innerUDP := rpu.InnerUDP()
+			if sentUDP.Dst != innerUDP.Dst {
 				// this is not our packet
 				continue
 			}
 			// source port may be mangled by a NAT
-			if sentUDP.SrcPort != innerUDP.SrcPort {
+			if sentUDP.Src != innerUDP.Src {
 				// source ports do not match - it's not for this packet
-				probe.NATID = uint16(innerUDP.SrcPort)
+				probe.NATID = uint16(innerUDP.Src)
 			}
-			if innerIP.Length != sentIP.Length {
+			if innerIP.PayloadLen != spu.PayloadLen {
 				// different length, not our packet
 				continue
 			}
@@ -329,9 +336,9 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 
 			// gopacket does not export the fields with descriptions :(
 			description := "Unknown"
-			if icmp.TypeCode.Type() == layers.ICMPv6TypeDestinationUnreachable && icmp.TypeCode.Code() == layers.ICMPv6CodePortUnreachable {
+			if icmp.Type == layers.ICMPv6TypeDestinationUnreachable && icmp.Code == layers.ICMPv6CodePortUnreachable {
 				description = "Destination port unreachable"
-			} else if icmp.TypeCode.Type() == layers.ICMPv6TypeTimeExceeded && icmp.TypeCode.Code() == layers.ICMPv6CodeHopLimitExceeded {
+			} else if icmp.Type == layers.ICMPv6TypeTimeExceeded && icmp.Code == layers.ICMPv6CodeHopLimitExceeded {
 				description = "Hop limit exceeded"
 			}
 			// this is our packet. Let's fill the probe data up
@@ -344,10 +351,8 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.Received = &results.Packet{
 				Timestamp: rpu.Timestamp,
 				ICMP: results.ICMP{
-					// XXX it seems that gopacket's ICMP does not support
-					// extentions for MPLS..
-					Type:        icmp.TypeCode.Type(),
-					Code:        icmp.TypeCode.Code(),
+					Type:        uint8(icmp.Type),
+					Code:        uint8(icmp.Code),
 					Description: description,
 				},
 				IP: results.IP{
@@ -355,8 +360,8 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					DstIP: spu.LocalAddr,
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(innerUDP.SrcPort),
-					DstPort: uint16(innerUDP.DstPort),
+					SrcPort: uint16(innerUDP.Src),
+					DstPort: uint16(innerUDP.Dst),
 				},
 			}
 			// break, since this is a response to the sent probe
@@ -372,8 +377,7 @@ func (d UDPv6) Traceroute() (*results.Results, error) {
 	if err := d.Validate(); err != nil {
 		return nil, err
 	}
-	packets := d.ForgePackets()
-	sent, received, err := d.SendReceive(packets)
+	sent, received, err := d.SendReceive()
 	if err != nil {
 		return nil, err
 	}

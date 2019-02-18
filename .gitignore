@@ -2,3 +2,5 @@
 .*.swp
 *.so
 *.dylib
+build
+go/dublintraceroute/cmd/dublin-traceroute/dublin-traceroute

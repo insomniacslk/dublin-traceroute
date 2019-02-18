@@ -72,7 +72,7 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
-// Packet generates a probe packet and returns it as bytes.
+// packet generates a probe packet and returns its bytes.
 func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]byte, error) {
 	// forge the payload. The last two bytes will be adjusted to have a
 	// predictable checksum for NAT detection
@@ -118,7 +118,7 @@ type pkt struct {
 	Port int
 }
 
-// Packets returns a channel of packets that will be sent as probes
+// packets returns a channel of packets that will be sent as probes
 func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 	numPackets := int(d.NumPaths) * int(d.MaxTTL-d.MinTTL)
 	ret := make(chan pkt, numPackets)
