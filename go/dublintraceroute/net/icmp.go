@@ -115,7 +115,7 @@ func (i *ICMP) Unmarshal(b []byte) error {
 	i.Type = ICMPType(b[0])
 	i.Code = ICMPCode(b[1])
 	i.Checksum = binary.BigEndian.Uint16(b[2:4])
-	// try parsing ICMP extensions
+	// TODO parse ICMP multi-part
 	payload := b[ICMPHeaderLen:]
 	if len(payload) > 0 {
 		i.next = &Raw{Data: payload}
