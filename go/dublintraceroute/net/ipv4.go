@@ -7,8 +7,8 @@ import (
 	"net"
 )
 
-// Version is IP version 4
-var Version = 4
+// Version4 is IP version 4
+var Version4 = 4
 
 // MinIPv4HeaderLen is the minimum IPv4 header length
 var MinIPv4HeaderLen = 20
@@ -44,13 +44,13 @@ type IPv4 struct {
 	Flags     int
 	FragOff   int
 	TTL       int
-	Proto     int
+	Proto     IPProto
 	Checksum  int
 	Src       net.IP
 	Dst       net.IP
 	Options   []Option
 	next      Layer
-	// IP in ICMP, if set, won't make the parser fail on shorter packets
+	// IP in ICMP, if set, won't make the parser fail on short packets
 	IPinICMP bool
 }
 
@@ -67,11 +67,11 @@ func (h *IPv4) SetNext(l Layer) {
 // Marshal serializes the layer
 func (h IPv4) Marshal() ([]byte, error) {
 	var b bytes.Buffer
-	// Version checks
+	// Version check
 	if h.Version == 0 {
-		h.Version = Version
+		h.Version = Version4
 	}
-	if h.Version != Version {
+	if h.Version != Version4 {
 		return nil, errors.New("invalid version")
 	}
 	// IHL checks
@@ -135,6 +135,14 @@ func (h IPv4) Marshal() ([]byte, error) {
 	if h.Proto < 0 || h.Proto > 0xff {
 		return nil, errors.New("invalid protocol")
 	}
+	if h.Proto == 0 {
+		switch next.(type) {
+		case *UDP:
+			h.Proto = ProtoUDP
+		case *ICMP:
+			h.Proto = ProtoICMP
+		}
+	}
 	binary.Write(&b, binary.BigEndian, uint8(h.Proto))
 
 	// Checksum - left to 0, filled in by the platform
@@ -180,7 +188,7 @@ func (h *IPv4) Unmarshal(b []byte) error {
 	buf := bytes.NewBuffer(b)
 	u8, _ = buf.ReadByte()
 	h.Version = int(u8 >> 4)
-	if h.Version != Version {
+	if h.Version != Version4 {
 		return errors.New("invalid version")
 	}
 	h.HeaderLen = int(u8 & 0xf)
@@ -200,7 +208,7 @@ func (h *IPv4) Unmarshal(b []byte) error {
 	u8, _ = buf.ReadByte()
 	h.TTL = int(u8)
 	u8, _ = buf.ReadByte()
-	h.Proto = int(u8)
+	h.Proto = IPProto(u8)
 	buf.Read(u16[:])
 	h.Checksum = int(binary.BigEndian.Uint16(u16[:]))
 	buf.Read(u32[:])
@@ -214,7 +222,7 @@ func (h *IPv4) Unmarshal(b []byte) error {
 	}
 	// payload
 	if len(b) < h.TotalLen && !h.IPinICMP {
-		return errors.New("invalid IP packet: payload too short")
+		return errors.New("invalid IPv4 packet: payload too short")
 	}
 	payload := b[h.HeaderLen*4 : h.TotalLen]
 	if h.Proto == ProtoUDP && !h.IsFragment() {

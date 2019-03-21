@@ -103,7 +103,7 @@ func TestIPv4Unmarshal(t *testing.T) {
 	var ip IPv4
 	err := ip.Unmarshal(data)
 	require.NoError(t, err)
-	require.Equal(t, Version, ip.Version)
+	require.Equal(t, Version4, ip.Version)
 	require.Equal(t, 0, ip.DiffServ)
 	require.Equal(t, 36, ip.TotalLen)
 	require.Equal(t, 0x1234, ip.ID)
