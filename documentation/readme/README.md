@@ -260,7 +260,7 @@ Options:
   -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe
   -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL
   -D DELAY --delay=DELAY        the inter-packet delay
-  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see less hops than expected
+  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected
 
 
 See documentation at https://dublin-traceroute.net
