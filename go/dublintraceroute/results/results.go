@@ -67,11 +67,14 @@ type Results struct {
 }
 
 func (r *Results) compress() {
+	if r.compressed {
+		return
+	}
 	for k, v := range r.Flows {
 		for idx, e := range v {
 			if e.IsLast {
-				v = v[:idx]
-				r.Flows[k] = v
+				r.Flows[k] = r.Flows[k][:idx+1]
+				break
 			}
 		}
 	}

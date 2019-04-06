@@ -294,7 +294,7 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				continue
 			}
 
-			// the two packets belong to the same flow. If the checksum
+			// the two packets belong to the same flow. If the checksums
 			// differ there's a NAT
 			NATID := rpu.InnerUDP().Csum - sentUDP.Csum
 			// TODO this works when the source port is fixed. Allow for variable
@@ -305,14 +305,16 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				continue
 			}
 			description := "Unknown"
+			isPortUnreachable := false
 			if rpu.ICMP().Type == inet.ICMPDestUnreachable && rpu.ICMP().Code == 3 {
+				isPortUnreachable = true
 				description = "Destination port unreachable"
 			} else if rpu.ICMP().Type == inet.ICMPTimeExceeded && rpu.ICMP().Code == 0 {
 				description = "TTL expired in transit"
 			}
 			// This is our packet, let's fill the probe data up
 			probe.Flowhash = flowhash
-			probe.IsLast = bytes.Equal(rpu.Addr.To4(), d.Target.To4())
+			probe.IsLast = bytes.Equal(rpu.Addr.To4(), d.Target.To4()) || isPortUnreachable
 			probe.Name = rpu.Addr.String() // TODO compute this field
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
 			probe.NATID = NATID
