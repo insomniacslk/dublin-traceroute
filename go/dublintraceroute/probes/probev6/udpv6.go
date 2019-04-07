@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/net/icmp"
 
-	"github.com/google/gopacket/layers"
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
@@ -295,8 +294,8 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				continue
 			}
 			icmp := rpu.ICMPv6()
-			if icmp.Type != layers.ICMPv6TypeTimeExceeded &&
-				!(icmp.Type == layers.ICMPv6TypeDestinationUnreachable && icmp.Code == layers.ICMPv6CodePortUnreachable) {
+			if icmp.Type != inet.ICMPv6TypeTimeExceeded &&
+				!(icmp.Type == inet.ICMPv6TypeDestUnreachable && icmp.Code == inet.ICMPv6CodePortUnreachable) {
 				// we want time-exceeded or port-unreachable
 				continue
 			}
@@ -333,12 +332,10 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			// TODO implement computeFlowHash also for IPv6. The function
 			// can be generalized for both v4 and v6
 			// flowhash, err := computeFlowHash(spu.Packet)
-
-			// gopacket does not export the fields with descriptions :(
 			description := "Unknown"
-			if icmp.Type == layers.ICMPv6TypeDestinationUnreachable && icmp.Code == layers.ICMPv6CodePortUnreachable {
+			if icmp.Type == inet.ICMPv6TypeDestUnreachable && icmp.Code == inet.ICMPv6CodePortUnreachable {
 				description = "Destination port unreachable"
-			} else if icmp.Type == layers.ICMPv6TypeTimeExceeded && icmp.Code == layers.ICMPv6CodeHopLimitExceeded {
+			} else if icmp.Type == inet.ICMPv6TypeTimeExceeded && icmp.Code == inet.ICMPv6CodeHopLimitExceeded {
 				description = "Hop limit exceeded"
 			}
 			// this is our packet. Let's fill the probe data up
