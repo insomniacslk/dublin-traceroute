@@ -25,7 +25,7 @@ func (p *ProbeUDPv4) Validate() error {
 		// decode packet
 		ip, err := inet.NewIPv4(p.Data)
 		if err != nil {
-			return nil
+			return err
 		}
 		p.ip = ip
 	}
@@ -73,13 +73,13 @@ func (pr *ProbeResponseUDPv4) Validate() error {
 		// decode packet
 		icmp, err := inet.NewICMP(pr.Data)
 		if err != nil {
-			return nil
+			return err
 		}
 		pr.icmp = icmp
 	}
 	var l inet.Layer
 	if l = pr.icmp.Next(); l == nil {
-		return errors.New("IP layer has no payload")
+		return errors.New("ICMP layer has no payload")
 	}
 	raw, ok := l.(*inet.Raw)
 	if !ok {
