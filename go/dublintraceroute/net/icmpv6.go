@@ -8,8 +8,8 @@ import (
 
 // ICMPv6 is an ICMPv6 packet
 type ICMPv6 struct {
-	Type     ICMPType
-	Code     ICMPCode
+	Type     ICMPv6Type
+	Code     ICMPv6Code
 	Checksum uint16
 	// See RFC792, RFC4884, RFC4950.
 	Unused uint32
@@ -24,43 +24,53 @@ type ICMPv6Type uint8
 
 // ICMP types
 var (
-	ICMPv6DestUnreachable                              ICMPv6Type = 1
-	ICMPv6PacketTooBig                                 ICMPv6Type = 2
-	ICMPv6TimeExceeded                                 ICMPv6Type = 3
-	ICMPv6ParameterProblem                             ICMPv6Type = 4
-	ICMPv6EchoRequest                                  ICMPv6Type = 128
-	ICMPv6EchoReply                                    ICMPv6Type = 129
-	ICMPv6GroupMembershipQuery                         ICMPv6Type = 130
-	ICMPv6GroupMembershipReport                        ICMPv6Type = 131
-	ICMPv6GroupMembershipReduction                     ICMPv6Type = 132
-	ICMPv6RouterSolicitation                           ICMPv6Type = 133
-	ICMPv6RouterAdvertisement                          ICMPv6Type = 134
-	ICMPv6NeighborAdvertisement                        ICMPv6Type = 135
-	ICMPv6NeighborSolicitation                         ICMPv6Type = 136
-	ICMPv6Redirect                                     ICMPv6Type = 137
-	ICMPv6RouterRenumbering                            ICMPv6Type = 138
-	ICMPv6ICMPNodeInformationQuery                     ICMPv6Type = 139
-	ICMPv6ICMPNodeInformationResponse                  ICMPv6Type = 140
-	ICMPv6InverseNeighborDiscoverySolicitationMessage  ICMPv6Type = 141
-	ICMPv6InverseNeighborDiscoveryAdvertisementMessage ICMPv6Type = 142
-	ICMPv6MLDv2MulticastListenerReport                 ICMPv6Type = 143
-	ICMPv6HomeAgentAddressDiscoveryRequestMessage      ICMPv6Type = 144
-	ICMPv6HomeAgentAddressDiscoveryReplyMessage        ICMPv6Type = 145
-	ICMPv6MobilePrefixSolicitation                     ICMPv6Type = 146
-	ICMPv6MobilePrefixAdvertisement                    ICMPv6Type = 147
-	ICMPv6CertificationPathSolicitation                ICMPv6Type = 148
-	ICMPv6CertificationPathAdvertisement               ICMPv6Type = 149
-	ICMPv6ExperimentalMobilityProtocols                ICMPv6Type = 150
-	ICMPv6MulticastRouterAdvertisement                 ICMPv6Type = 151
-	ICMPv6MulticastRouterSolicitation                  ICMPv6Type = 152
-	ICMPv6MulticastRouterTermination                   ICMPv6Type = 153
-	ICMPv6FMIPv6Messages                               ICMPv6Type = 154
+	ICMPv6TypeDestUnreachable                              ICMPv6Type = 1
+	ICMPv6TypePacketTooBig                                 ICMPv6Type = 2
+	ICMPv6TypeTimeExceeded                                 ICMPv6Type = 3
+	ICMPv6TypeParameterProblem                             ICMPv6Type = 4
+	ICMPv6TypeEchoRequest                                  ICMPv6Type = 128
+	ICMPv6TypeEchoReply                                    ICMPv6Type = 129
+	ICMPv6TypeGroupMembershipQuery                         ICMPv6Type = 130
+	ICMPv6TypeGroupMembershipReport                        ICMPv6Type = 131
+	ICMPv6TypeGroupMembershipReduction                     ICMPv6Type = 132
+	ICMPv6TypeRouterSolicitation                           ICMPv6Type = 133
+	ICMPv6TypeRouterAdvertisement                          ICMPv6Type = 134
+	ICMPv6TypeNeighborAdvertisement                        ICMPv6Type = 135
+	ICMPv6TypeNeighborSolicitation                         ICMPv6Type = 136
+	ICMPv6TypeRedirect                                     ICMPv6Type = 137
+	ICMPv6TypeRouterRenumbering                            ICMPv6Type = 138
+	ICMPv6TypeICMPNodeInformationQuery                     ICMPv6Type = 139
+	ICMPv6TypeICMPNodeInformationResponse                  ICMPv6Type = 140
+	ICMPv6TypeInverseNeighborDiscoverySolicitationMessage  ICMPv6Type = 141
+	ICMPv6TypeInverseNeighborDiscoveryAdvertisementMessage ICMPv6Type = 142
+	ICMPv6TypeMLDv2MulticastListenerReport                 ICMPv6Type = 143
+	ICMPv6TypeHomeAgentAddressDiscoveryRequestMessage      ICMPv6Type = 144
+	ICMPv6TypeHomeAgentAddressDiscoveryReplyMessage        ICMPv6Type = 145
+	ICMPv6TypeMobilePrefixSolicitation                     ICMPv6Type = 146
+	ICMPv6TypeMobilePrefixAdvertisement                    ICMPv6Type = 147
+	ICMPv6TypeCertificationPathSolicitation                ICMPv6Type = 148
+	ICMPv6TypeCertificationPathAdvertisement               ICMPv6Type = 149
+	ICMPv6TypeExperimentalMobilityProtocols                ICMPv6Type = 150
+	ICMPv6TypeMulticastRouterAdvertisement                 ICMPv6Type = 151
+	ICMPv6TypeMulticastRouterSolicitation                  ICMPv6Type = 152
+	ICMPv6TypeMulticastRouterTermination                   ICMPv6Type = 153
+	ICMPv6TypeFMIPv6Messages                               ICMPv6Type = 154
 )
 
 // ICMPv6Code defines ICMP types
 type ICMPv6Code uint8
 
 // TODO map ICMP codes, see https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-codes
+var (
+	// Destination unreachable
+	ICMPv6CodeNoRouteToDestination       ICMPv6Code
+	ICMPv6CodeAdministrativelyProhibited ICMPv6Code = 1
+	ICMPv6CodeAddressUnreachable         ICMPv6Code = 2
+	ICMPv6CodePortUnreachable            ICMPv6Code = 4
+	// Time exceeded
+	ICMPv6CodeHopLimitExceeded          ICMPv6Code
+	ICMPv6CodeFragmentReassemblyTimeout ICMPv6Code = 1
+)
 
 // NewICMPv6 constructs a new ICMPv6 header from a sequence of bytes
 func NewICMPv6(b []byte) (*ICMPv6, error) {
@@ -113,8 +123,8 @@ func (i *ICMPv6) Unmarshal(b []byte) error {
 	if len(b) < ICMPv6HeaderLen {
 		return errors.New("short icmpv6 header")
 	}
-	i.Type = ICMPType(b[0])
-	i.Code = ICMPCode(b[1])
+	i.Type = ICMPv6Type(b[0])
+	i.Code = ICMPv6Code(b[1])
 	i.Checksum = binary.BigEndian.Uint16(b[2:4])
 	// TODO parse ICMP extensions
 	payload := b[ICMPv6HeaderLen:]
