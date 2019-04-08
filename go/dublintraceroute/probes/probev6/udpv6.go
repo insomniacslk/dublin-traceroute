@@ -293,31 +293,13 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 				log.Printf("Invalid probe response: %v", err)
 				continue
 			}
-			icmp := rpu.ICMPv6()
-			if icmp.Type != inet.ICMPv6TypeTimeExceeded &&
-				!(icmp.Type == inet.ICMPv6TypeDestUnreachable && icmp.Code == inet.ICMPv6CodePortUnreachable) {
-				// we want time-exceeded or port-unreachable
-				continue
-			}
-			innerIP := rpu.InnerIP()
-			// TODO check that To16() is the right thing to call here
-			if !bytes.Equal(innerIP.Dst.To16(), d.Target.To16()) {
-				// this is not a response to any of our probes, discard it
-				continue
-			}
-			innerUDP := rpu.InnerUDP()
-			if sentUDP.Dst != innerUDP.Dst {
-				// this is not our packet
+			if !rpu.Matches(spu) {
 				continue
 			}
 			// source port may be mangled by a NAT
-			if sentUDP.Src != innerUDP.Src {
+			if sentUDP.Src != rpu.InnerUDP().Src {
 				// source ports do not match - it's not for this packet
-				probe.NATID = uint16(innerUDP.Src)
-			}
-			if innerIP.PayloadLen != spu.PayloadLen {
-				// different length, not our packet
-				continue
+				probe.NATID = uint16(rpu.InnerUDP().Src)
 			}
 			// TODO
 			// Here, in IPv4, we would check for innerIP.ID != sentIP.Id but
@@ -332,6 +314,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			// TODO implement computeFlowHash also for IPv6. The function
 			// can be generalized for both v4 and v6
 			// flowhash, err := computeFlowHash(spu.Packet)
+			icmp := rpu.ICMPv6()
 			description := "Unknown"
 			if icmp.Type == inet.ICMPv6TypeDestUnreachable && icmp.Code == inet.ICMPv6CodePortUnreachable {
 				description = "Destination port unreachable"
@@ -344,7 +327,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
 			probe.Name = rpu.Addr.String() // TODO compute this field
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
-			probe.ZeroTTLForwardingBug = (innerIP.HopLimit == 0)
+			probe.ZeroTTLForwardingBug = (rpu.InnerIP().HopLimit == 0)
 			probe.Received = &results.Packet{
 				Timestamp: rpu.Timestamp,
 				ICMP: results.ICMP{
@@ -357,8 +340,8 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					DstIP: spu.LocalAddr,
 				},
 				UDP: results.UDP{
-					SrcPort: uint16(innerUDP.Src),
-					DstPort: uint16(innerUDP.Dst),
+					SrcPort: uint16(rpu.InnerUDP().Src),
+					DstPort: uint16(rpu.InnerUDP().Dst),
 				},
 			}
 			// break, since this is a response to the sent probe

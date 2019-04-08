@@ -1,11 +1,13 @@
 package probev6
 
 import (
+	"bytes"
 	"errors"
 	"net"
 	"time"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 )
 
 // ProbeUDPv6 represents a sent probe packet with its metadata
@@ -82,6 +84,37 @@ func (pr *ProbeResponseUDPv6) Validate() error {
 		return errors.New("inner IPv6 layer has no UDP layer")
 	}
 	return nil
+}
+
+// Matches returns true if this probe response matches the given probe. Both
+// probes must have been already validated with Validate, this function may
+// panic otherwise.
+func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
+	p := pi.(*ProbeUDPv6)
+	if p == nil {
+		return false
+	}
+	icmp := pr.ICMPv6()
+	if icmp.Type != inet.ICMPv6TypeTimeExceeded &&
+		!(icmp.Type == inet.ICMPv6TypeDestUnreachable && icmp.Code == inet.ICMPv6CodePortUnreachable) {
+		// we want time-exceeded or port-unreachable
+		return false
+	}
+	// TODO check that To16() is the right thing to call here
+	if !bytes.Equal(pr.InnerIP().Dst.To16(), p.RemoteAddr.To16()) {
+		// this is not a response to any of our probes, discard it
+		return false
+	}
+	innerUDP := pr.InnerUDP()
+	if p.UDP().Dst != innerUDP.Dst {
+		// this is not our packet
+		return false
+	}
+	if pr.InnerIP().PayloadLen != p.PayloadLen {
+		// different length, not our packet
+		return false
+	}
+	return true
 }
 
 // ICMPv6 returns the ICMPv6 layer of the probe, expecting it to be the

@@ -10,4 +10,5 @@ type Probe interface {
 // probe response has to implement this interface
 type ProbeResponse interface {
 	Validate() error
+	Matches(Probe) bool
 }

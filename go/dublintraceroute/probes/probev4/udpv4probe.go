@@ -7,6 +7,7 @@ import (
 	"time"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
+	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 )
 
 // ProbeUDPv4 represents a sent probe packet with its metadata
@@ -123,10 +124,11 @@ func (pr ProbeResponseUDPv4) InnerUDP() *inet.UDP {
 	return u
 }
 
-// Matches returns true if this probe response matches a given probe. Both
+// Matches returns true if this probe response matches the given probe. Both
 // probes must have been already validated with Validate, this function may
 // panic otherwise.
-func (pr ProbeResponseUDPv4) Matches(p *ProbeUDPv4) bool {
+func (pr ProbeResponseUDPv4) Matches(pi probes.Probe) bool {
+	p := pi.(*ProbeUDPv4)
 	if p == nil {
 		return false
 	}
