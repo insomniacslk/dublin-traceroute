@@ -1,31 +1,29 @@
-language: cpp
-
-before_script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install_dependencies_linux.sh ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then .travis/install_dependencies_osx.sh ; fi
-  - mkdir build
-  - cd build
-  - cmake ..
-
-script:
-  - make VERBOSE=1
-  - make tests && make test
-
-after_script:
-  - ./dublin-traceroute
-
-sudo: required
-dist: trusty
-
-os:
-  - linux
-  - osx
-
-compiler:
-  - clang
-  - gcc
+dist: xenial
 
 matrix:
+  include:
+    - os:
+        - linux
+        - osx
+      compiler:
+        - clang
+        - gcc
+      language: cpp
+      before_script:
+        - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install_dependencies_linux.sh ; fi
+        - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then .travis/install_dependencies_osx.sh ; fi
+        - mkdir build
+        - cd build
+        - cmake ..
+      script:
+        - make VERBOSE=1
+        - make tests && make test
+      after_script:
+        - ./dublin-traceroute
+      install:
+        - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+        - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8"; fi
+        - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
   exclude:
     - os: osx
       compiler: gcc
@@ -63,11 +61,6 @@ addons:
     # Take care in resource usage, and consider the build frequency allowances per
     #   https://scan.coverity.com/faq#frequency
     branch_pattern: coverity_scan
-
-install:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8"; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
 
 env:
   global:
