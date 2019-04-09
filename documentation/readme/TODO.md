@@ -1,7 +1,7 @@
 * Implement UDP-DNS probes
 * Implement TCP-80/443
 * sniff traffic and react to failing probes
-* Support IPv6
+* ~~Support IPv6~~ (currently only in the Go implementation)
 * implement ICMP-paris
 * testing!
 * ~~add min-ttl option~~ done in [commit 6b6be67](https://github.com/insomniacslk/dublin-traceroute/commit/6b6be67df1ea17c7de20b8ee1e4fab664ee177eb)
@@ -25,7 +25,7 @@
 * Explore the use of eBPF as a backend
 * Send 3 packets per hop
 * Convert the traceroute internal representation into a graph (use https://graph-tool.skewed.de/ maybe?)
-* Use both src and dst ports for tracerouting
+* ~~Use both src and dst ports for tracerouting~~
 * Add path MTU discovery and measure fragmentation-induced latency
 * Use [pyasn](https://github.com/hadiasghari/pyasn) to look up AS by IP
 * Integrate the ASN graph with a world map (e.g. openstreetmap or google maps)

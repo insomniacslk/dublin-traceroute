@@ -272,14 +272,13 @@ Additional features in the Python module at https://github.com/insomniacslk/pyth
 
 At the moment, a lot of things, including:
 
-* let the user choose the source port
-* introduce UDP DNS probes
+* ~~let the user choose the source port~~
 * ~~improve the the command-line tool by adding more arguments~~ done in [commit 8a3ae75](https://github.com/insomniacslk/dublin-traceroute/commit/8a3ae7513645afdad5eabd8d6f368383dff98c8b)
 * introduce more tracerouting strategies: at the moment it sends all the packets at once
 * send more than one packet per hop (traceroute sends 3 packets per hop)
 * ~~support MPLS~~ done in https://github.com/insomniacslk/dublin-traceroute/issues/6
-* support ECMP on IPv6
-* support for TCP and ICMP probes
+* IPv6 probes in the C++ library (already implemented in the Go codebase)
+* support for TCP, ICMP, and DNS probes
 * add Path MTU Discovery to detect latencies introduced by fragmentation
 * improve the documentation
 * ~~improve the build system (there is just a static Makefile now)~~ done in [commit ffa9d3c](https://github.com/insomniacslk/dublin-traceroute/commit/ffa9d3c306fb772e2c95963a94cdc386b0126206), using CMake
