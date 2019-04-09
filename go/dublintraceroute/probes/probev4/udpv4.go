@@ -231,6 +231,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			now := time.Now()
 			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
 			n, addr, err := conn.ReadFrom(data)
+			receivedAt := time.Now()
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
 					if nerr.Timeout() {
@@ -242,7 +243,7 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			packets = append(packets, &ProbeResponseUDPv4{
 				Data:      data[:n],
 				Addr:      (*(addr).(*net.IPAddr)).IP,
-				Timestamp: now,
+				Timestamp: receivedAt,
 			})
 		}
 	}

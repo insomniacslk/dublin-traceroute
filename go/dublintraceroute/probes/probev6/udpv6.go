@@ -236,6 +236,7 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			now := time.Now()
 			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
 			n, addr, err := conn.ReadFrom(data)
+			receivedAt := time.Now()
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
 					if nerr.Timeout() {
@@ -247,7 +248,7 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			packets = append(packets, &ProbeResponseUDPv6{
 				Data:      data[:n],
 				Addr:      (*(addr).(*net.IPAddr)).IP,
-				Timestamp: now,
+				Timestamp: receivedAt,
 			})
 		}
 	}
@@ -325,7 +326,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			// probe.Flowhash = flowhash
 			// TODO check if To16() is the right thing to do here
 			probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
-			probe.Name = rpu.Addr.String() // TODO compute this field
+			probe.Name = rpu.Addr.String()
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
 			probe.ZeroTTLForwardingBug = (rpu.InnerIP().HopLimit == 0)
 			probe.Received = &results.Packet{
