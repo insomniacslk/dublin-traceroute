@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import json
 import random
@@ -31,7 +31,7 @@ def json_to_graphviz(traceroute, no_rtt=False):
 
     # create a dummy first node to add the source host to the graph
     # FIXME this approach sucks
-    for flow, hops in traceroute['flows'].iteritems():
+    for flow, hops in traceroute['flows'].items():
         src_ip = hops[0]['sent']['ip']['src']
         firsthop = {}
         hops = [firsthop] + hops
@@ -104,19 +104,19 @@ def main():
     args = parse_args()
     traceroute = json.load(args.jsonfile)
     graph = json_to_graphviz(traceroute, args.no_rtt)
-    print graph
+    print(f'{graph}')
     graph.layout('dot')
 
     # Save to DOT
     if args.generate_dot:
-        dotfile = '{name}.dot'.format(name=args.jsonfile.name)
+        dotfile = f'{args.jsonfile.name}.dot'
         graph.write(dotfile)
-        print('Generated DOT file: {f}'.format(f=dotfile))
+        print(f'Generated DOT file: {dotfile}')
 
     # Save to PNG
-    pngfile = '{name}.png'.format(name=args.jsonfile.name)
+    pngfile = f'{args.jsonfile.name}.png'
     graph.draw(pngfile)
-    print('Graph saved to {f}'.format(f=pngfile))
+    print(f'Graph saved to {pngfile}')
 
 if __name__ == '__main__':
     main()
