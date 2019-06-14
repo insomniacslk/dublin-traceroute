@@ -177,7 +177,7 @@ func main() {
 		log.Fatalf("Traceroute() failed: %v", err)
 	}
 	output := results.ToJson(true, "  ")
-	if Args.outputFile == "" {
+	if Args.outputFile == "-" {
 		fmt.Println(output)
 	} else {
 		err := ioutil.WriteFile(Args.outputFile, []byte(output), 0644)
