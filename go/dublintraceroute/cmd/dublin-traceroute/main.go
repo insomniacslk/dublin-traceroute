@@ -106,7 +106,7 @@ func init() {
 	flag.IntVar(&Args.maxTTL, "max-ttl", DefaultMaxTTL, "Set the maximum TTL")
 	flag.IntVar(&Args.delay, "delay", DefaultDelay, "Set the inter-packet delay in msecs")
 	flag.BoolVar(&Args.brokenNAT, "broken-nat", false, "Use this when the network has a broken NAT. Useful when no results are shown after a certain TTL when they are expected")
-	flag.StringVar(&Args.outputFile, "output-file", "", "Output file. If empty or omitted will print to stdout")
+	flag.StringVar(&Args.outputFile, "output-file", DefaultOutputFile, "Output file name")
 	flag.BoolVar(&Args.v4, "force-ipv4", false, "Force the use of the legacy IPv4 protocol")
 }
 
@@ -127,7 +127,8 @@ func main() {
 		log.Fatal("Exactly one target is required")
 	}
 
-	target, err := resolve(flag.Arg(0), !Args.v4)
+	Args.target = flag.Arg(0)
+	target, err := resolve(Args.target, !Args.v4)
 	if err != nil {
 		log.Fatalf("Cannot resolve %s: %v", flag.Arg(0), err)
 	}
