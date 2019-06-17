@@ -268,6 +268,15 @@ Please report bugs at https://github.com/insomniacslk/dublin-traceroute
 Additional features in the Python module at https://github.com/insomniacslk/python-dublin-traceroute
 ```
 
+## Running via Docker
+
+You can see dublin-traceroute at work using the docker image [`insomniacslk/dublin-traceroute`](https://cloud.docker.com/u/insomniacslk/repository/docker/insomniacslk/dublin-traceroute).
+Just run:
+```
+sudo docker run -v "$PWD/output:/output" insomniacslk/dublin-traceroute
+```
+This will run `dublin-traceroute 8.8.8.8` and produce output files in the `output` directory.
+
 ## What is missing?
 
 At the moment, a lot of things, including:
