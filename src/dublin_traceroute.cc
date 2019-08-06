@@ -247,7 +247,9 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	TracerouteResults *results = new TracerouteResults(flows, min_ttl_, broken_nat(), use_srcport_for_path_generation());
 
 	match_sniffed_packets(*results);
-	match_hostnames(*results, flows);
+	if (!no_dns()) {
+		match_hostnames(*results, flows);
+	}
 
 	mutex_tracerouting.unlock();
 
