@@ -38,7 +38,7 @@ public:
 	Hop(): last_hop_(false) { }
 	std::shared_ptr<IP> sent() { return sent_; }
 	std::shared_ptr<IP> received() { return received_; }
-	std::string name() { if (name_.empty()) name_ = resolve(); return name_; }
+	std::string name() { return name_; }
 	std::shared_ptr<Tins::Timestamp> received_timestamp() { return received_timestamp_; }
 	std::shared_ptr<Tins::Timestamp> sent_timestamp() { return sent_timestamp_; }
 	std::string resolve();

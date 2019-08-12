@@ -19,7 +19,7 @@
 #define DEFAULT_OUTPUT_FILE	"trace.json"
 
 
-const char *shortopts = "hvs:d:n:t:T:D:bio:";
+const char *shortopts = "hvs:d:n:t:T:D:biNo:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -31,6 +31,7 @@ const struct option longopts[] = {
 	{"delay", required_argument, NULL, 'D'},
 	{"broken-nat", no_argument, NULL, 'b'},
 	{"use-srcport", no_argument, NULL, 'i'},
+	{"no-dns", no_argument, NULL, 'N'},
 	{"output-file", required_argument, NULL, 'o'},
 	{NULL, 0, NULL, 0},
 };
@@ -49,6 +50,7 @@ Usage:
                              [--delay=delay_in_ms]
                              [--broken-nat]
                              [--use-srcport]
+                             [--no-dns]
                              [--output-file=file_name]
                              [--help]
                              [--version]
@@ -64,6 +66,7 @@ Options:
   -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected
   -i --use-srcport              generate paths using source port instead of destination port
+  -N --no-dns                   do not attempt to do reverse DNS lookup of the hops
   -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
 
 
@@ -85,6 +88,7 @@ main(int argc, char **argv) {
 	long	delay = DublinTraceroute::default_delay;
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 	bool	use_srcport_for_path_generation = DublinTraceroute::default_use_srcport_for_path_generation;
+	bool	no_dns = DublinTraceroute::default_no_dns;
 	std::string	output_file = DEFAULT_OUTPUT_FILE;
 
 	if (geteuid() == 0) {
@@ -135,6 +139,9 @@ main(int argc, char **argv) {
 				break;
 			case 'i':
 				use_srcport_for_path_generation = true;
+				break;
+			case 'N':
+				no_dns = true;
 				break;
 			case 'o':
 				output_file.assign(optarg);
@@ -207,7 +214,8 @@ main(int argc, char **argv) {
 			max_ttl,
 			delay,
 			broken_nat,
-			use_srcport_for_path_generation
+			use_srcport_for_path_generation,
+			no_dns
 	);
 	
 	std::cout << "Traceroute from 0.0.0.0:" << Dublin.srcport();

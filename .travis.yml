@@ -15,7 +15,7 @@ after_script:
   - ./dublin-traceroute
 
 sudo: required
-dist: trusty
+dist: bionic
 
 os:
   - linux
@@ -35,9 +35,11 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-4.9
-      - clang-3.8
+      - g++-5
+      - clang
       - libpcap-dev
+      - libtins-dev
+      - libjsoncpp-dev
   coverity_scan:
 
     # GitHub project metadata
@@ -65,8 +67,8 @@ addons:
     branch_pattern: coverity_scan
 
 install:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++"; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
 
 env:
