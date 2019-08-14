@@ -79,11 +79,7 @@ func (i *ICMP) SetNext(l Layer) {
 	i.next = l
 }
 
-// Marshal serializes the layer
-func (i ICMP) Marshal() ([]byte, error) {
-	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, i.Type)
-	binary.Write(&b, binary.BigEndian, i.Code)
+func (i ICMP) getPayload() ([]byte, error) {
 	var (
 		payload []byte
 		err     error
@@ -94,16 +90,40 @@ func (i ICMP) Marshal() ([]byte, error) {
 			return nil, err
 		}
 	}
-	// compute checksum
-	i.Checksum = 0
+	return payload, nil
+}
+
+// ComputeChecksum computes the ICMP checksum.
+func (i ICMP) ComputeChecksum() (uint16, error) {
+	payload, err := i.getPayload()
+	if err != nil {
+		return 0, err
+	}
 	var bc bytes.Buffer
 	binary.Write(&bc, binary.BigEndian, i.Type)
 	binary.Write(&bc, binary.BigEndian, i.Code)
 	binary.Write(&bc, binary.BigEndian, payload)
-	i.Checksum = checksum(bc.Bytes())
+	return checksum(bc.Bytes()), nil
+}
+
+// Marshal serializes the layer
+func (i ICMP) Marshal() ([]byte, error) {
+	var b bytes.Buffer
+	binary.Write(&b, binary.BigEndian, i.Type)
+	binary.Write(&b, binary.BigEndian, i.Code)
+	csum, err := i.ComputeChecksum()
+	if err != nil {
+		return nil, err
+	}
+	i.Checksum = csum
 	binary.Write(&b, binary.BigEndian, i.Checksum)
 	// TODO implement multipart, RFC4884, RFC4950
 	binary.Write(&b, binary.BigEndian, i.Unused)
+	payload, err := i.getPayload()
+	if err != nil {
+		return nil, err
+	}
+	binary.Write(&b, binary.BigEndian, payload)
 	return b.Bytes(), nil
 }
 
