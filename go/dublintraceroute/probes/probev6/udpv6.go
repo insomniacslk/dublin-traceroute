@@ -270,13 +270,13 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 		sentUDP := spu.UDP()
 		probe := results.Probe{
 			Sent: results.Packet{
-				Timestamp: spu.Timestamp,
+				Timestamp: results.UnixMsec(spu.Timestamp),
 				IP: results.IP{
 					SrcIP: spu.LocalAddr,
 					DstIP: spu.RemoteAddr,
 					TTL:   uint8(spu.HopLimit), // TTL should be really renamed to something better..
 				},
-				UDP: results.UDP{
+				UDP: &results.UDP{
 					SrcPort: uint16(sentUDP.Src),
 					DstPort: uint16(sentUDP.Dst),
 				},
@@ -330,8 +330,8 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
 			probe.ZeroTTLForwardingBug = (rpu.InnerIP().HopLimit == 0)
 			probe.Received = &results.Packet{
-				Timestamp: rpu.Timestamp,
-				ICMP: results.ICMP{
+				Timestamp: results.UnixMsec(rpu.Timestamp),
+				ICMP: &results.ICMP{
 					Type:        uint8(icmp.Type),
 					Code:        uint8(icmp.Code),
 					Description: description,
@@ -340,7 +340,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					SrcIP: rpu.Addr,
 					DstIP: spu.LocalAddr,
 				},
-				UDP: results.UDP{
+				UDP: &results.UDP{
 					SrcPort: uint16(rpu.InnerUDP().Src),
 					DstPort: uint16(rpu.InnerUDP().Dst),
 				},

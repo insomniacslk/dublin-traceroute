@@ -267,13 +267,13 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 		sentUDP := spu.UDP()
 		probe := results.Probe{
 			Sent: results.Packet{
-				Timestamp: spu.Timestamp,
+				Timestamp: results.UnixMsec(spu.Timestamp),
 				IP: results.IP{
 					SrcIP: spu.LocalAddr,
 					DstIP: sentIP.Dst,
 					TTL:   uint8(sentIP.TTL),
 				},
-				UDP: results.UDP{
+				UDP: &results.UDP{
 					SrcPort: uint16(sentUDP.Src),
 					DstPort: uint16(sentUDP.Dst),
 				},
@@ -321,8 +321,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.NATID = NATID
 			probe.ZeroTTLForwardingBug = (rpu.InnerIP().TTL == 0)
 			probe.Received = &results.Packet{
-				Timestamp: rpu.Timestamp,
-				ICMP: results.ICMP{
+				Timestamp: results.UnixMsec(rpu.Timestamp),
+				ICMP: &results.ICMP{
 					Type:        uint8(rpu.ICMP().Type),
 					Code:        uint8(rpu.ICMP().Code),
 					Description: description,
@@ -331,7 +331,7 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					SrcIP: rpu.Addr,
 					DstIP: spu.LocalAddr,
 				},
-				UDP: results.UDP{
+				UDP: &results.UDP{
 					SrcPort: uint16(rpu.InnerUDP().Src),
 					DstPort: uint16(rpu.InnerUDP().Dst),
 				},

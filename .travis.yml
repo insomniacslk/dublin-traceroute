@@ -10,6 +10,7 @@ before_script:
 script:
   - make VERBOSE=1
   - make tests && make test
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then (cd ../integ && go get -t -v ./... && go test); fi
 
 after_script:
   - ./dublin-traceroute
@@ -40,6 +41,7 @@ addons:
       - libpcap-dev
       - libtins-dev
       - libjsoncpp-dev
+      - iptables # for integ tests
   coverity_scan:
 
     # GitHub project metadata
