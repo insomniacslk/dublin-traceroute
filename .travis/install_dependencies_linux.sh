@@ -7,5 +7,5 @@ set -exu
 mkdir -p "${GOPATH}/src/github.com/insomniacslk"
 cd "${GOPATH}/src/github.com/insomniacslk"
 ln -s "${TRAVIS_BUILD_DIR}" dublin-traceroute
-cd dublin-traceroute/go/dublintraceroute/cmd/routest
-go get -v ./...
+cd dublin-traceroute
+go get -v -t ./...

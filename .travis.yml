@@ -1,35 +1,58 @@
-language: cpp
+jobs:
+  include:
+    # C++ implementation, Linux
+    - language: cpp
+      os: linux
+      compiler: gcc
+      before_script:
+        - .travis/install_dependencies_linux.sh
+        - mkdir build
+        - cd build
+        - cmake ..
+      script:
+        - make VERBOSE=1
+        - make tests && make test
+      after_script:
+        - ./dublin-traceroute -h
+    # C++ implementation, OSX
+    - language: cpp
+      os: osx
+      compiler: clang
+      before_script:
+        - .travis/install_dependencies_osx.sh
+        - mkdir build
+        - cd build
+        - cmake ..
+      script:
+        - make VERBOSE=1
+        - make tests && make test
+      after_script:
+        - ./dublin-traceroute -h
+    # Go implementation
+    - language: go
+      go: "1.13.x"
+      script:
+        - cd go/dublintraceroute/cmd/dublin-traceroute
+        - go get -v ./...
+        - go build
+    # Integration tests
+    - language: go
+      os: linux
+      go: "1.13.x"
+      before_script:
+          # Rebuild the cpp implementation so it is found by the integ tests.
+          # This is the same as pre_script and script in the cpp section above,
+          # and must be kept in sync.
+        - .travis/install_dependencies_linux.sh
+        - mkdir build
+        - cd build
+        - cmake ..
+        - make VERBOSE=1
+      script:
+        - cd ../.travis && ./run-integ.sh
 
-before_script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install_dependencies_linux.sh ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then .travis/install_dependencies_osx.sh ; fi
-  - mkdir build
-  - cd build
-  - cmake ..
-
-script:
-  - make VERBOSE=1
-  - make tests && make test
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then (cd ../integ && go get -t -v ./... && go test); fi
-
-after_script:
-  - ./dublin-traceroute
-
-sudo: required
 dist: bionic
 
-os:
-  - linux
-  - osx
-
-compiler:
-  - clang
-  - gcc
-
-matrix:
-  exclude:
-    - os: osx
-      compiler: gcc
 
 addons:
   apt:
@@ -57,11 +80,7 @@ addons:
     # build_command_prepend: ./configure
 
     # The command that will be added as an argument to "cov-build" to compile your project for analysis,
-    build_command:
-      - mkdir build
-        cd build
-        cmake ..
-        make
+    build_command: mkdir build && cd build && cmake .. && make
 
     # Pattern to match selecting branches that will run analysis. We recommend leaving this set to 'coverity_scan'.
     # Take care in resource usage, and consider the build frequency allowances per
