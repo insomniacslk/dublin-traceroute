@@ -11,7 +11,6 @@ RUN apt-get update &&                          \
         cmake \
         libjsoncpp-dev \
         libtins-dev \
-        libpcap-dev \
         `# dependencies for the python module` \
         python3-dev \
         python3-setuptools \

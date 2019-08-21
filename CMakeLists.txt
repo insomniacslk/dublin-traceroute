@@ -29,7 +29,7 @@ set_target_properties(dublintraceroute
       SOVERSION 0.1.1
     )
 
-find_package(PkgConfig)
+find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(libtins 3.4)
 if (${libtins_FOUND})
@@ -40,6 +40,7 @@ else (${libtins_FOUND})
 endif (${libtins_FOUND})
 
 pkg_search_module(JSONCPP REQUIRED jsoncpp)
+link_libraries(${JSONCPP_LIBRARIES})
 
 add_executable(dublin-traceroute src/main.cc)
 target_link_libraries(dublintraceroute ${CMAKE_THREAD_LIBS_INIT})

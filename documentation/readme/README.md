@@ -172,7 +172,6 @@ Independently of the OS, to build dublin-traceroute you need:
 
 * Install [libtins](https://github.com/mfontanini/libtins) 3.4+ from source
 * Install [jsoncpp](https://github.com/open-source-parsers/jsoncpp) from source
-* Install libpcap-dev
 * Check out dublin-traceroute on github
 
 ```shell

@@ -15,33 +15,36 @@ script:
 after_script:
   - ./dublin-traceroute
 
-sudo: required
-dist: bionic
-
-os:
-  - linux
-  - osx
-
-compiler:
-  - clang
-  - gcc
-
 matrix:
-  exclude:
+  include:
+    - os: linux
+      dist: bionic
+      compiler: clang
+    - os: linux
+      dist: bionic
+      compiler: gcc
     - os: osx
+      osx_image: xcode11
+      compiler: gcc
+    - os: osx
+      osx_image: xcode10
       compiler: gcc
 
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
     packages:
       - g++-5
       - clang
-      - libpcap-dev
+      - libpcap-dev # required by libtins, but not actually used
       - libtins-dev
       - libjsoncpp-dev
       - iptables # for integ tests
+    update: true
+  homebrew:
+    # packages are installed in install_dependencies_osx.sh because libtins
+    # needs to be installed from sources on older osx versions, because they
+    # have old versions in binary form.
+    update: true
   coverity_scan:
 
     # GitHub project metadata
@@ -70,8 +73,7 @@ addons:
 
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++"; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libstdc++"; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then export CXXFLAGS="-stdlib=libc++"; fi
 
 env:
   global:
