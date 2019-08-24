@@ -100,7 +100,7 @@ func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]by
 	iph.SetNext(&udph)
 	udph.SetPrev(&iph)
 	udph.SetNext(&inet.Raw{Data: payload})
-	udpb, err := udph.Marshal()
+	udpb, err := udph.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]by
 		return nil, err
 	}
 	iph.ID = int(tmp.Csum)
-	return iph.Marshal()
+	return iph.MarshalBinary()
 }
 
 type pkt struct {
@@ -191,7 +191,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 		return nil, nil, err
 	}
 	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
-	conn.Close()
+	_ = conn.Close()
 	sent := make([]probes.Probe, 0, numPackets)
 	for p := range d.packets(localAddr.IP, d.Target) {
 		daddr := syscall.SockaddrInet4{

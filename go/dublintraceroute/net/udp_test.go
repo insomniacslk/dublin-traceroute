@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUDPMarshal(t *testing.T) {
+func TestUDPMarshalBinary(t *testing.T) {
 	want := []byte{
 		0x12, 0x34, // src port
 		0x23, 0x45, // dst port
@@ -21,12 +21,12 @@ func TestUDPMarshal(t *testing.T) {
 		Len:  8,
 		Csum: 0,
 	}
-	b, err := udp.Marshal()
+	b, err := udp.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }
 
-func TestMarshalIPv4(t *testing.T) {
+func TestMarshalBinaryIPv4(t *testing.T) {
 	want := []byte{
 		0x12, 0x34, // src port
 		0x23, 0x45, // dst port
@@ -45,12 +45,12 @@ func TestMarshalIPv4(t *testing.T) {
 		Csum: 0,
 	}
 	udp.SetPrev(&ip)
-	b, err := udp.Marshal()
+	b, err := udp.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }
 
-func TestUDPUnmarshal(t *testing.T) {
+func TestUDPUnmarshalBinary(t *testing.T) {
 	b := []byte{
 		0x12, 0x34, // src port
 		0x23, 0x45, // dst port
@@ -58,7 +58,7 @@ func TestUDPUnmarshal(t *testing.T) {
 		0xff, 0x35, // csum
 	}
 	var u UDP
-	err := u.Unmarshal(b)
+	err := u.UnmarshalBinary(b)
 	require.NoError(t, err)
 	assert.Equal(t, uint16(0x1234), u.Src)
 	assert.Equal(t, uint16(0x2345), u.Dst)

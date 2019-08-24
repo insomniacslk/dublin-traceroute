@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIPv6Marshal(t *testing.T) {
+func TestIPv6MarshalBinary(t *testing.T) {
 	want := []byte{
 		0x60, 0x00, 0x00, 0x00, // version, tclass, flow label
 		0, 8, // payload length
@@ -32,12 +32,12 @@ func TestIPv6Marshal(t *testing.T) {
 		Dst: 0xbcde,
 	}
 	iph.SetNext(&udp)
-	b, err := iph.Marshal()
+	b, err := iph.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }
 
-func TestIPv6Unmarshal(t *testing.T) {
+func TestIPv6UnmarshalBinary(t *testing.T) {
 	data := []byte{
 		0x61, 0x4a, 0xbc, 0xde, // version, tclass, flow label
 		0, 8, // payload length
@@ -49,7 +49,7 @@ func TestIPv6Unmarshal(t *testing.T) {
 		0xab, 0xcd, 0xbc, 0xde, 0x00, 0x08, 0x00, 0x00,
 	}
 	var ip IPv6
-	err := ip.Unmarshal(data)
+	err := ip.UnmarshalBinary(data)
 	require.NoError(t, err)
 	assert.Equal(t, 6, ip.Version)
 	assert.Equal(t, 0x14, ip.TrafficClass)

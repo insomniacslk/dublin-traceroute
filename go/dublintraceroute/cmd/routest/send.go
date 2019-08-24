@@ -10,7 +10,7 @@ import (
 
 // Send4 sends an IPv4 packet to its destination.
 func Send4(ifname string, ip *inet.IPv4) error {
-	data, err := ip.Marshal()
+	data, err := ip.MarshalBinary()
 	if err != nil {
 		return err
 	}

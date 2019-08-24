@@ -83,7 +83,7 @@ func (d UDPv6) packet(hl uint8, src, dst net.IP, srcport, dstport uint16) ([]byt
 		Src: srcport,
 		Dst: dstport,
 	}
-	udpb, err := udph.Marshal()
+	udpb, err := udph.MarshalBinary()
 	if err != nil {
 		return nil, nil, err
 	}

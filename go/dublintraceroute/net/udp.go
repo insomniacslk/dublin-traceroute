@@ -23,7 +23,7 @@ type UDP struct {
 // NewUDP constructs a new UDP header from a sequence of bytes.
 func NewUDP(b []byte) (*UDP, error) {
 	var h UDP
-	if err := h.Unmarshal(b); err != nil {
+	if err := h.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
 	return &h, nil
@@ -69,8 +69,8 @@ type pseudoheader struct {
 	ulen        uint16
 }
 
-// Marshal serializes the layer
-func (h UDP) Marshal() ([]byte, error) {
+// MarshalBinary serializes the layer
+func (h UDP) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.BigEndian, h.Src)
 	binary.Write(&buf, binary.BigEndian, h.Dst)
@@ -79,7 +79,7 @@ func (h UDP) Marshal() ([]byte, error) {
 		err     error
 	)
 	if next := h.Next(); next != nil {
-		if payload, err = next.Marshal(); err != nil {
+		if payload, err = next.MarshalBinary(); err != nil {
 			return nil, err
 		}
 	}
@@ -122,8 +122,8 @@ func (h UDP) Marshal() ([]byte, error) {
 	return ret, nil
 }
 
-// Unmarshal deserializes the raw bytes to an UDP header
-func (h *UDP) Unmarshal(b []byte) error {
+// UnmarshalBinary deserializes the raw bytes to an UDP header
+func (h *UDP) UnmarshalBinary(b []byte) error {
 	if len(b) < UDPHeaderLen {
 		return errors.New("short udp header")
 	}

@@ -1,7 +1,6 @@
 package probev6
 
 import (
-	"bytes"
 	"errors"
 	"net"
 	"time"
@@ -72,7 +71,7 @@ func (pr *ProbeResponseUDPv6) Validate() error {
 	}
 	var ip inet.IPv6
 	ip.IPinICMP = true
-	if err := ip.Unmarshal(raw.Data); err != nil {
+	if err := ip.UnmarshalBinary(raw.Data); err != nil {
 		return err
 	}
 	pr.innerIP = &ip
@@ -101,7 +100,7 @@ func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
 		return false
 	}
 	// TODO check that To16() is the right thing to call here
-	if !bytes.Equal(pr.InnerIP().Dst.To16(), p.RemoteAddr.To16()) {
+	if !pr.InnerIP().Dst.To16().Equal(p.RemoteAddr.To16()) {
 		// this is not a response to any of our probes, discard it
 		return false
 	}

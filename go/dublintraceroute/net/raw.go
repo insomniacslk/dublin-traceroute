@@ -8,7 +8,7 @@ type Raw struct {
 // NewRaw builds a new Raw layer
 func NewRaw(b []byte) (*Raw, error) {
 	var r Raw
-	if err := r.Unmarshal(b); err != nil {
+	if err := r.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -22,13 +22,13 @@ func (r Raw) Next() Layer {
 // SetNext sets the next layer. For Raw this is a no op
 func (r Raw) SetNext(Layer) {}
 
-// Marshal serializes the layer
-func (r Raw) Marshal() ([]byte, error) {
+// MarshalBinary serializes the layer
+func (r Raw) MarshalBinary() ([]byte, error) {
 	return r.Data, nil
 }
 
-// Unmarshal deserializes the layer
-func (r *Raw) Unmarshal(b []byte) error {
+// UnmarshalBinary deserializes the layer
+func (r *Raw) UnmarshalBinary(b []byte) error {
 	r.Data = b
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIPv4Marshal(t *testing.T) {
+func TestIPv4MarshalBinary(t *testing.T) {
 	want := []byte{
 		0x47,  // Ver, IHL
 		0x00,  // differentiated services
@@ -37,12 +37,12 @@ func TestIPv4Marshal(t *testing.T) {
 			{0x1, 0x2, 0x3, 0x4},
 		},
 	}
-	b, err := iph.Marshal()
+	b, err := iph.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }
 
-func TestIPv4MarshalPayload(t *testing.T) {
+func TestIPv4MarshalBinaryPayload(t *testing.T) {
 	want := []byte{
 		0x47,  // Ver, IHL
 		0x00,  // differentiated services
@@ -74,7 +74,7 @@ func TestIPv4MarshalPayload(t *testing.T) {
 		},
 	}
 	iph.SetNext(&Raw{Data: []byte{0xde, 0xad, 0xc0, 0xde}})
-	b, err := iph.Marshal()
+	b, err := iph.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }

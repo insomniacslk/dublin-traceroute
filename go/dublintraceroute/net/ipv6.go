@@ -16,7 +16,7 @@ var IPv6HeaderLen = 40
 // NewIPv6 constructs a new IPv6 header from a sequence of bytes
 func NewIPv6(b []byte) (*IPv6, error) {
 	var h IPv6
-	if err := h.Unmarshal(b); err != nil {
+	if err := h.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
 	return &h, nil
@@ -47,8 +47,8 @@ func (h *IPv6) SetNext(l Layer) {
 	h.next = l
 }
 
-// Marshal serializes the layer
-func (h IPv6) Marshal() ([]byte, error) {
+// MarshalBinary serializes the layer
+func (h IPv6) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 	// Version check
 	if h.Version == 0 {
@@ -71,7 +71,7 @@ func (h IPv6) Marshal() ([]byte, error) {
 		err     error
 	)
 	if h.next != nil {
-		payload, err = h.next.Marshal()
+		payload, err = h.next.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
@@ -118,8 +118,8 @@ func (h IPv6) Marshal() ([]byte, error) {
 	return ret, nil
 }
 
-// Unmarshal deserializes the raw bytes to an IPv6 header
-func (h *IPv6) Unmarshal(b []byte) error {
+// UnmarshalBinary deserializes the raw bytes to an IPv6 header
+func (h *IPv6) UnmarshalBinary(b []byte) error {
 	if len(b) < IPv6HeaderLen {
 		return errors.New("short ipv6 header")
 	}
