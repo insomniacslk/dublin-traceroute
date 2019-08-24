@@ -132,17 +132,17 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	);
 
 	// start the ICMP listener
+	int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	if (sock == -1) {
+		throw std::runtime_error(strerror(errno));
+	}
+	int ts_flag = 1;
+	int ret;
+	if ((ret = setsockopt(sock, SOL_SOCKET, SO_TIMESTAMP, (int *)&ts_flag, sizeof(ts_flag))) == -1) {
+		throw std::runtime_error(strerror(errno));
+	}
 	std::thread listener_thread(
 		[&]() {
-			int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-			if (sock == -1) {
-				throw std::runtime_error(strerror(errno));
-			}
-			int ts_flag = 1;
-			int ret;
-			if ((ret = setsockopt(sock, SOL_SOCKET, SO_TIMESTAMP, (int *)&ts_flag, sizeof(ts_flag))) == -1) {
-				throw std::runtime_error(strerror(errno));
-			}
 			size_t received;
 			char buf[512];
 			struct msghdr msg;
@@ -224,12 +224,19 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl);
 				//UDPv4Probe probe(target(), dport, srcport(), ttl);	
 			}
-			auto packet = probe->send();
+			IP *packet;
+			try {
+				packet = &probe->send();
+			} catch (std::runtime_error &e) {
+				std::stringstream ss;
+				ss << "Cannot send packet: " << e.what();
+				throw DublinTracerouteException(ss.str());
+			}
 			auto now = Tins::Timestamp::current_time();
 
 			try {
 				Hop hop;
-				hop.sent(packet);
+				hop.sent(*packet);
 				hop.sent_timestamp(now);
 				hops.push_back(hop);
 			} catch (std::runtime_error e) {
