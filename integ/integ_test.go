@@ -112,6 +112,9 @@ func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
 			log.Printf("Error returned from command %+v: %v", rCmd, err)
 		}
 	}()
+	// wait a second to give routest time to start
+	// TODO do something better than waiting
+	time.Sleep(time.Second)
 
 	// run dublin-traceroute
 	errCh := make(chan error, 1)

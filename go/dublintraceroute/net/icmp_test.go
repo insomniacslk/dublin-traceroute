@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestICMPMarshal(t *testing.T) {
+func TestICMPMarshalBinary(t *testing.T) {
 	want := []byte{
 		11, // ICMP time exceeded
 		0,
@@ -18,12 +18,12 @@ func TestICMPMarshal(t *testing.T) {
 		Type: ICMPTimeExceeded,
 		Code: 0,
 	}
-	b, err := icmp.Marshal()
+	b, err := icmp.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
 }
 
-func TestICMPUnmarshal(t *testing.T) {
+func TestICMPUnmarshalBinaryBinary(t *testing.T) {
 	b := []byte{
 		11, // ICMP time exceeded
 		0,
@@ -33,7 +33,7 @@ func TestICMPUnmarshal(t *testing.T) {
 		0xde, 0xad, 0xc0, 0xde,
 	}
 	var i ICMP
-	err := i.Unmarshal(b)
+	err := i.UnmarshalBinaryBinary(b)
 	require.NoError(t, err)
 	assert.Equal(t, ICMPTimeExceeded, i.Type)
 	assert.Equal(t, ICMPCode(0), i.Code)

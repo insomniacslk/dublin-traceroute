@@ -75,7 +75,7 @@ var (
 // NewICMPv6 constructs a new ICMPv6 header from a sequence of bytes
 func NewICMPv6(b []byte) (*ICMPv6, error) {
 	var i ICMPv6
-	if err := i.Unmarshal(b); err != nil {
+	if err := i.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
 	return &i, nil
@@ -91,8 +91,8 @@ func (i *ICMPv6) SetNext(l Layer) {
 	i.next = l
 }
 
-// Marshal serializes the layer
-func (i ICMPv6) Marshal() ([]byte, error) {
+// MarshalBinary serializes the layer
+func (i ICMPv6) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 	binary.Write(&b, binary.BigEndian, i.Type)
 	binary.Write(&b, binary.BigEndian, i.Code)
@@ -101,7 +101,7 @@ func (i ICMPv6) Marshal() ([]byte, error) {
 		err     error
 	)
 	if i.next != nil {
-		payload, err = i.next.Marshal()
+		payload, err = i.next.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
@@ -118,8 +118,8 @@ func (i ICMPv6) Marshal() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Unmarshal deserializes the layer
-func (i *ICMPv6) Unmarshal(b []byte) error {
+// UnmarshalBinary deserializes the layer
+func (i *ICMPv6) UnmarshalBinary(b []byte) error {
 	if len(b) < ICMPv6HeaderLen {
 		return errors.New("short icmpv6 header")
 	}

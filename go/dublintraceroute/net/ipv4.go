@@ -28,7 +28,7 @@ type Option [4]byte
 // NewIPv4 constructs a new IPv4 header from a sequence of bytes
 func NewIPv4(b []byte) (*IPv4, error) {
 	var h IPv4
-	if err := h.Unmarshal(b); err != nil {
+	if err := h.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
 	return &h, nil
@@ -64,8 +64,8 @@ func (h *IPv4) SetNext(l Layer) {
 	h.next = l
 }
 
-// Marshal serializes the layer
-func (h IPv4) Marshal() ([]byte, error) {
+// MarshalBinary serializes the layer
+func (h IPv4) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 	// Version check
 	if h.Version == 0 {
@@ -95,7 +95,7 @@ func (h IPv4) Marshal() ([]byte, error) {
 		err     error
 	)
 	if next != nil {
-		payload, err = next.Marshal()
+		payload, err = next.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
@@ -175,8 +175,8 @@ func (h IPv4) IsFragment() bool {
 	return h.Flags&MoreFragments != 0 || h.FragOff != 0
 }
 
-// Unmarshal deserializes the raw bytes to an IPv4 header
-func (h *IPv4) Unmarshal(b []byte) error {
+// UnmarshalBinary deserializes the raw bytes to an IPv4 header
+func (h *IPv4) UnmarshalBinary(b []byte) error {
 	if len(b) < MinIPv4HeaderLen {
 		return errors.New("short ipv4 header")
 	}

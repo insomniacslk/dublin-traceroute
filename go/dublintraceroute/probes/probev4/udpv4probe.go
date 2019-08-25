@@ -1,7 +1,6 @@
 package probev4
 
 import (
-	"bytes"
 	"errors"
 	"net"
 	"time"
@@ -88,7 +87,7 @@ func (pr *ProbeResponseUDPv4) Validate() error {
 	}
 	var ip inet.IPv4
 	ip.IPinICMP = true
-	if err := ip.Unmarshal(raw.Data); err != nil {
+	if err := ip.UnmarshalBinary(raw.Data); err != nil {
 		return err
 	}
 	pr.innerIP = &ip
@@ -136,7 +135,7 @@ func (pr ProbeResponseUDPv4) Matches(pi probes.Probe) bool {
 		// we want time-exceeded or port-unreachable
 		return false
 	}
-	if !bytes.Equal(pr.InnerIP().Dst.To4(), p.IP().Dst.To4()) {
+	if !pr.InnerIP().Dst.To4().Equal(p.IP().Dst.To4()) {
 		return false
 	}
 	if p.UDP().Src != pr.InnerUDP().Src || p.UDP().Dst != pr.InnerUDP().Dst {
