@@ -156,7 +156,8 @@ on Ubuntu:
 
 on CentOS 7:
 
-* copy the [dublin-traceroute repository configuration](dublin-traceroute.repo) to `/etc/yum.repos.d/`
+* (EDIT: this repo is no more, see next step) ~~copy the [dublin-traceroute repository configuration](dublin-traceroute.repo) to `/etc/yum.repos.d/`~~
+* add the `teknoraver/networking` COPR, https://copr.fedorainfracloud.org/coprs/teknoraver/networking/
 * yum update
 * yum install dublin-traceroute
 
