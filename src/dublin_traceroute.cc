@@ -41,6 +41,8 @@ extern int errno;
 
 #define SNIFFER_TIMEOUT_MS	2000
 
+// this is not necessary in C++17 and can be assigned in the header file.
+const std::string DublinTraceroute::default_interface = "";
 
 Tins::Timestamp extract_timestamp_from_msg(struct msghdr &msg) {
 	int level, type;
@@ -218,10 +220,10 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 			
 			UDPv4Probe *probe = NULL;
 			if(use_srcport_for_path_generation()){
-				probe = new UDPv4Probe(target(), dstport(), iterated_port, ttl);
+				probe = new UDPv4Probe(target(), dstport(), iterated_port, ttl, interface());
 			}
 			else{
-				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl);
+				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl, interface());
 				//UDPv4Probe probe(target(), dport, srcport(), ttl);	
 			}
 			IP *packet;

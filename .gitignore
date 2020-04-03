@@ -4,3 +4,6 @@
 *.dylib
 build
 go/dublintraceroute/cmd/dublin-traceroute/dublin-traceroute
+go/dublintraceroute/cmd/routest/routest
+.travis/trace.json
+integ/trace.json

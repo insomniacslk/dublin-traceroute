@@ -12,7 +12,7 @@ class UDPv4Test: public ::testing::Test {
 };
 
 TEST_F(UDPv4Test, TestUDPv4Constructor) {
-	UDPv4Probe p = UDPv4Probe(IPv4Address("8.8.8.8"), 33434, 12345, 64, IPv4Address("127.0.0.2"));
+	UDPv4Probe p = UDPv4Probe(IPv4Address("8.8.8.8"), 33434, 12345, 64, "", IPv4Address("127.0.0.2"));
 	ASSERT_EQ(p.local_port(), 12345);
 	ASSERT_EQ(p.remote_port(), 33434);
 	ASSERT_EQ(p.ttl(), 64);
@@ -30,7 +30,7 @@ TEST_F(UDPv4Test, TestUDPv4ConstructorDefaultLocalAddr) {
 }
 
 TEST_F(UDPv4Test, TestUDPv4PacketForging) {
-	UDPv4Probe p = UDPv4Probe(IPv4Address("127.0.0.3"), 33434, 12345, 64, IPv4Address("127.0.0.2"));
+	UDPv4Probe p = UDPv4Probe(IPv4Address("127.0.0.3"), 33434, 12345, 64, "", IPv4Address("127.0.0.2"));
 	IP* ip = p.forge();
 	ASSERT_EQ(ip->tos(), 0);
 	ASSERT_EQ(ip->id(), 60794);

@@ -25,6 +25,7 @@ private:
 	uint16_t local_port_;
 	uint16_t remote_port_;
 	uint8_t ttl_;
+	std::string interface_;
 	IP *packet = nullptr;
 
 public:
@@ -33,17 +34,20 @@ public:
 	const uint16_t local_port() const { return local_port_; };
 	const uint16_t remote_port() const { return remote_port_; };
 	const uint8_t ttl() const { return ttl_; };
+	const std::string interface() const { return interface_; };
 
 	UDPv4Probe(
 		IPv4Address remote_addr,
 		uint16_t remote_port,
 		uint16_t local_port,
 		uint8_t ttl,
+		std::string interface = "",
 		IPv4Address local_addr = 0):
 			remote_addr_(remote_addr),
 			remote_port_(remote_port),
 			local_port_(local_port),
 			ttl_(ttl),
+			interface_(interface),
 			local_addr_(local_addr) { };
 	~UDPv4Probe();
 	IP* forge();

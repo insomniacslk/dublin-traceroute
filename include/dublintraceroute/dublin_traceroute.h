@@ -51,6 +51,7 @@ private:
 	const bool		 broken_nat_,
 				 use_srcport_for_path_generation_,
 				 no_dns_;
+	std::string		 interface_;
 	std::mutex		 mutex_tracerouting,
 				 mutex_sniffed_packets;
 	IPv4Address		 my_address;
@@ -67,6 +68,7 @@ public:
 	static const bool	 default_broken_nat = false;
 	static const bool	 default_use_srcport_for_path_generation = false;
 	static const bool	 default_no_dns = false;
+	static const std::string default_interface;
 	DublinTraceroute(
 			const std::string &dst,
 			const uint16_t srcport = default_srcport,
@@ -77,7 +79,8 @@ public:
 			const uint16_t delay = default_delay,
 			const bool broken_nat = default_broken_nat,
 			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation,
-			const bool no_dns = default_no_dns
+			const bool no_dns = default_no_dns,
+			const std::string interface = default_interface
 			):
 				srcport_(srcport),
 				dstport_(dstport),
@@ -88,7 +91,8 @@ public:
 				delay_(delay),
 				broken_nat_(broken_nat),
 				use_srcport_for_path_generation_(use_srcport_for_path_generation),
-				no_dns_(no_dns)
+				no_dns_(no_dns),
+				interface_(interface)
 	{ validate_arguments(); }
 	DublinTraceroute(
 			const char *dst,
@@ -100,7 +104,8 @@ public:
 			const uint16_t delay = default_delay,
 			const bool broken_nat = default_broken_nat,
 			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation,
-			const bool no_dns = default_no_dns
+			const bool no_dns = default_no_dns,
+			const std::string interface = default_interface
 		       ):
 				srcport_(srcport),
 				dstport_(dstport),
@@ -111,7 +116,8 @@ public:
 				delay_(delay),
 				broken_nat_(broken_nat),
 				use_srcport_for_path_generation_(use_srcport_for_path_generation),
-				no_dns_(no_dns)
+				no_dns_(no_dns),
+				interface_(interface)
 	{ validate_arguments(); }
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
@@ -124,7 +130,8 @@ public:
 		delay_(source.delay_),
 		broken_nat_(source.broken_nat_),
 		use_srcport_for_path_generation_(source.use_srcport_for_path_generation_),
-		no_dns_(source.no_dns_)
+		no_dns_(source.no_dns_),
+		interface_(source.interface_)
 	{ validate_arguments(); }
 
 	inline const uint16_t srcport() const { return srcport_; }
@@ -135,6 +142,7 @@ public:
 	inline const uint16_t delay() const { return delay_; }
 	inline const bool broken_nat() const { return broken_nat_; }
 	inline const bool no_dns() const { return no_dns_; }
+	inline const std::string interface() const { return interface_; }
 	inline const bool use_srcport_for_path_generation() const { return use_srcport_for_path_generation_; }
 	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
