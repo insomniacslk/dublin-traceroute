@@ -39,7 +39,12 @@ else (${libtins_FOUND})
     pkg_search_module(libtins REQUIRED libtins)
 endif (${libtins_FOUND})
 
-pkg_search_module(JSONCPP REQUIRED jsoncpp)
+if (${jsoncpp_FOUND})
+    MESSAGE(STATUS "jsoncpp found via CMake")
+else (${jsoncpp_FOUND})
+    MESSAGE(STATUS "jsoncpp not found via CMake, trying pkg-config")
+    pkg_search_module(JSONCPP REQUIRED jsoncpp)
+endif (${jsoncpp_FOUND})
 
 add_executable(dublin-traceroute src/main.cc)
 target_link_libraries(dublintraceroute ${CMAKE_THREAD_LIBS_INIT})
@@ -47,7 +52,7 @@ target_link_libraries(dublin-traceroute dublintraceroute)
 target_link_libraries(dublintraceroute tins)
 
 target_link_libraries(dublintraceroute ${JSONCPP_LIBRARIES} jsoncpp)
-target_include_directories(dublintraceroute PUBLIC ${JSONCPP_INCLUDE_DIRS})
+target_include_directories(dublintraceroute PUBLIC ${JSONCPP_INCLUDE_DIRS} ${TINS_INCLUDE_DIRS})
 
 #set_property(TARGET dublintraceroute PROPERTY CXX_STANDARD 11)
 #set_property(TARGET dublintraceroute PROPERTY CXX_STANDARD_REQUIRED ON)

@@ -190,8 +190,9 @@ cmake ..
 make
 ```
 
-#### Building on OS X
+#### Building on macOS
 
+You need the latest XCode installed to build this project. Then run:
 ```bash
 brew install https://raw.githubusercontent.com/insomniacslk/dublin-traceroute/master/homebrew/dublin-traceroute.rb
 ```

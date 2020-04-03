@@ -1,3 +1,4 @@
+# You need the latest XCode for this formula to build
 class DublinTraceroute < Formula
   desc "NAT-aware multipath tracerouting tool"
   homepage "https://dublin-traceroute.net"
@@ -6,6 +7,9 @@ class DublinTraceroute < Formula
   head "https://github.com/insomniacslk/dublin-traceroute.git"
 
   depends_on "cmake" => :build
+  depends_on "pkg-config" => :build
+  # this should be in the libtins formula
+  depends_on "libpcap"
   depends_on "libtins"
   depends_on "jsoncpp"
 
