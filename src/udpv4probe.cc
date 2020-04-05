@@ -55,12 +55,15 @@ IP* UDPv4Probe::forge() {
 }
 
 IP &UDPv4Probe::send() {
-	NetworkInterface iface = NetworkInterface::default_interface();
+	std::string ifname = NetworkInterface::default_interface().name();
+	if (interface_ != "") {
+		ifname = interface_;
+	}
 	PacketSender sender;
 	if (packet == nullptr) {
 		packet = forge();
 	}
-	sender.send(*packet, iface.name());
+	sender.send(*packet, ifname);
 	return *packet;
 }
 

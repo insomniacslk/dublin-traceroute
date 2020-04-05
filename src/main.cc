@@ -32,6 +32,7 @@ const struct option longopts[] = {
 	{"broken-nat", no_argument, NULL, 'b'},
 	{"use-srcport", no_argument, NULL, 'i'},
 	{"no-dns", no_argument, NULL, 'N'},
+	{"interface", required_argument, NULL, 'I'},
 	{"output-file", required_argument, NULL, 'o'},
 	{NULL, 0, NULL, 0},
 };
@@ -51,23 +52,25 @@ Usage:
                              [--broken-nat]
                              [--use-srcport]
                              [--no-dns]
+                             [--interface=ifname]
                              [--output-file=file_name]
                              [--help]
                              [--version]
 
 Options:
-  -h --help                     this help
-  -v --version                  print the version of Dublin Traceroute
-  -s SRC_PORT --sport=SRC_PORT  the source port to send packets from (default: )" << DublinTraceroute::default_srcport << R"()
-  -d DST_PORT --dport=DST_PORT  the base destination port to send packets to (default: )" << DublinTraceroute::default_dstport << R"()
-  -n NPATHS --npaths=NPATHS     the number of paths to probe (default: )" << static_cast<int>(DublinTraceroute::default_npaths) << R"()
-  -t MIN_TTL --min-ttl=MIN_TTL  the minimum TTL to probe (default: )" << static_cast<int>(DublinTraceroute::default_min_ttl) << R"()
-  -T MAX_TTL --max-ttl=MAX_TTL  the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
-  -D DELAY --delay=DELAY        the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
-  -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected
-  -i --use-srcport              generate paths using source port instead of destination port
-  -N --no-dns                   do not attempt to do reverse DNS lookup of the hops
-  -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
+  -h, --help                    this help
+  -v, --version                 print the version of Dublin Traceroute
+  -s, --sport=SRC_PORT          the source port to send packets from (default: )" << DublinTraceroute::default_srcport << R"()
+  -d, --dport=DST_PORT          the base destination port to send packets to (default: )" << DublinTraceroute::default_dstport << R"()
+  -n, --npaths=NPATHS           the number of paths to probe (default: )" << static_cast<int>(DublinTraceroute::default_npaths) << R"()
+  -t, --min-ttl=MIN_TTL         the minimum TTL to probe (default: )" << static_cast<int>(DublinTraceroute::default_min_ttl) << R"()
+  -T, --max-ttl=MAX_TTL         the maximum TTL to probe. Must be greater or equal than the minimum TTL (default: )" << static_cast<int>(DublinTraceroute::default_max_ttl) << R"()
+  -D, --delay=DELAY             the inter-packet delay in milliseconds (default: )" << DublinTraceroute::default_delay << R"()
+  -b, --broken-nat              the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected
+  -i, --use-srcport             generate paths using source port instead of destination port
+  -N, --no-dns                  do not attempt to do reverse DNS lookup of the hops
+  -I, --interface=INTERFACE     force packets through the specified interface. If not specified, the default interface for the target will be used
+  -o, --output-file=OUTFILE     the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
 
 
 See documentation at https://dublin-traceroute.net
@@ -89,6 +92,7 @@ main(int argc, char **argv) {
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 	bool	use_srcport_for_path_generation = DublinTraceroute::default_use_srcport_for_path_generation;
 	bool	no_dns = DublinTraceroute::default_no_dns;
+	std::string interface = DublinTraceroute::default_interface;
 	std::string	output_file = DEFAULT_OUTPUT_FILE;
 
 	if (geteuid() == 0) {
@@ -142,6 +146,9 @@ main(int argc, char **argv) {
 				break;
 			case 'N':
 				no_dns = true;
+				break;
+			case 'I':
+				interface = optarg;
 				break;
 			case 'o':
 				output_file.assign(optarg);
@@ -215,17 +222,23 @@ main(int argc, char **argv) {
 			delay,
 			broken_nat,
 			use_srcport_for_path_generation,
-			no_dns
+			no_dns,
+			interface
 	);
 	
 	std::cout << "Traceroute from 0.0.0.0:" << Dublin.srcport();
-	if(use_srcport_for_path_generation == 1){
+	if (use_srcport_for_path_generation == 1){
 		std::cout << "~" << (Dublin.srcport() + npaths - 1);
 	}
 	
 	std::cout << " to " << Dublin.dst() << ":" << Dublin.dstport();
-	if(use_srcport_for_path_generation == 0){
+	if (use_srcport_for_path_generation == 0){
 		std::cout << "~" << (Dublin.dstport() + npaths - 1);
+	}
+	if (interface != "") {
+		std::cout << " through interface " << interface;
+	} else {
+		std::cout << " through default interface";
 	}
 	
 	std::cout << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
