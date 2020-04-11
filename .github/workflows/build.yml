@@ -1,0 +1,60 @@
+name: build
+on: [push]
+
+jobs:
+    lint_go:
+        name: run golangci-lint on Go subproject
+        runs-on: ubuntu-latest
+        steps:
+            - name: set up env
+              run: |
+                  echo "##[set-env name=GOPATH;]$(dirname $GITHUB_WORKSPACE)"
+                  echo "##[add-path]$(dirname $GITHUB_WORKSPACE)/bin"
+              shell: bash
+            - uses: actions/checkout@v2
+              with:
+                  path: src/github.com/${{ github.repository }}
+            - uses: actions-contrib/golangci-lint@v1
+    build_go:
+        name: build Go subproject
+        needs: [lint_go]
+        runs-on: ${{matrix.os}}
+        strategy:
+            matrix:
+                os: [ubuntu-16.04, ubuntu-18.04, ubuntu-latest, macos-latest]
+                go: ['1.13.x', '1.14.x']
+        steps:
+            - name: set up env
+              run: |
+                  echo "::set-env name=GOPATH::$(dirname $GITHUB_WORKSPACE)"
+                  echo "::add-path::$(dirname $GITHUB_WORKSPACE)/bin"
+              shell: bash
+            - uses: actions/checkout@v2
+              with:
+                  path: src/github.com/${{ github.repository }}
+            - uses: actions/setup-go@v2-beta
+              with:
+                  go-version: ${{ matrix.go }}
+            - run: |
+                go get ./...
+                go build ./...
+    test_go:
+        name: run tests for the Go subproject
+        needs: [build_go]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  path: src/github.com/${{ github.repository }}
+            - uses: actions/setup-go@v2-beta
+              with:
+                  go-version: ${{ matrix.go }}
+            - run: |
+                go test ./...
+#    coverage_go:
+#        name: code coverage via codecov.io for the Go subproject
+#        needs: [test_go]
+#        uses: codecov/codecov-action@v1.0.0
+#        with:
+#            token: {{secrets.CODECOV_TOKEN}}
+#            file: ./coverage.txt
