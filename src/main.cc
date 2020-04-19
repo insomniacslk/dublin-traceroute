@@ -16,9 +16,6 @@
 
 #include <dublintraceroute/dublin_traceroute.h>
 
-#define DEFAULT_OUTPUT_FILE	"trace.json"
-
-
 const char *shortopts = "hvs:d:n:t:T:D:biNo:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
@@ -37,7 +34,7 @@ const struct option longopts[] = {
 };
 
 static void usage() {
-	std::cout <<
+	std::cerr <<
 "Dublin Traceroute v" VERSION "\n"
 R"(Written by Andrea Barberio - https://insomniac.slackware.it
 
@@ -67,7 +64,7 @@ Options:
   -b --broken-nat               the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected
   -i --use-srcport              generate paths using source port instead of destination port
   -N --no-dns                   do not attempt to do reverse DNS lookup of the hops
-  -o --output-file              the output file name (default: )" << DEFAULT_OUTPUT_FILE << R"()
+  -o --output-file              the output file name (default: stdout)
 
 
 See documentation at https://dublin-traceroute.net
@@ -89,10 +86,10 @@ main(int argc, char **argv) {
 	bool	broken_nat = DublinTraceroute::default_broken_nat;
 	bool	use_srcport_for_path_generation = DublinTraceroute::default_use_srcport_for_path_generation;
 	bool	no_dns = DublinTraceroute::default_no_dns;
-	std::string	output_file = DEFAULT_OUTPUT_FILE;
+	std::string	output_file = "";
 
 	if (geteuid() == 0) {
-		std::cout
+		std::cerr
 			<< "WARNING: you are running this program as root. Consider setting the CAP_NET_RAW " << std::endl
 			<< "         capability and running as non-root user as a more secure alternative." << std::endl;
 	}
@@ -114,7 +111,7 @@ main(int argc, char **argv) {
 				usage();
 				std::exit(EXIT_SUCCESS);
 			case 'v':
-				std::cout << "Dublin Traceroute " << VERSION << std::endl;
+				std::cerr << "Dublin Traceroute " << VERSION << std::endl;
 				std::exit(EXIT_SUCCESS);
 			case 's':
 				TO_LONG(sport, optarg);
@@ -203,7 +200,7 @@ main(int argc, char **argv) {
 		std::exit(EXIT_FAILURE);
 	}
 
-	std::cout << "Starting dublin-traceroute" << std::endl;
+	std::cerr << "Starting dublin-traceroute" << std::endl;
 
 	DublinTraceroute Dublin(
 			target,
@@ -218,17 +215,17 @@ main(int argc, char **argv) {
 			no_dns
 	);
 	
-	std::cout << "Traceroute from 0.0.0.0:" << Dublin.srcport();
+	std::cerr << "Traceroute from 0.0.0.0:" << Dublin.srcport();
 	if(use_srcport_for_path_generation == 1){
-		std::cout << "~" << (Dublin.srcport() + npaths - 1);
+		std::cerr << "~" << (Dublin.srcport() + npaths - 1);
 	}
 	
-	std::cout << " to " << Dublin.dst() << ":" << Dublin.dstport();
+	std::cerr << " to " << Dublin.dst() << ":" << Dublin.dstport();
 	if(use_srcport_for_path_generation == 0){
-		std::cout << "~" << (Dublin.dstport() + npaths - 1);
+		std::cerr << "~" << (Dublin.dstport() + npaths - 1);
 	}
 	
-	std::cout << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
+	std::cerr << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
 		<< ", min TTL is " << min_ttl
 		<< ", max TTL is " << max_ttl
 		<< ", delay is " << delay << " ms"
@@ -239,23 +236,30 @@ main(int argc, char **argv) {
 	try {
 		results = Dublin.traceroute();
 	} catch (DublinTracerouteException &e) {
-		std::cout << "Failed: " << e.what() << std::endl;
+		std::cerr << "Failed: " << e.what() << std::endl;
 		std::exit(EXIT_FAILURE);
 	} catch (std::runtime_error &e) {
-		std::cout << "Failed: " << e.what() << std::endl;
+		std::cerr << "Failed: " << e.what() << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 
 	results->show();
 
 	// Save as JSON
-	std::ofstream jsonfile;
-	jsonfile.open(output_file);
-	jsonfile << results->to_json();
-	jsonfile.close();
-	std::cout << "Saved JSON file to " << output_file << " ." << std::endl;
-
-	std::cout << "You can convert it to DOT by running python3 -m dublintraceroute plot " << output_file << std::endl;
+	std::streambuf *buf;
+	std::ofstream of;
+	if (output_file == "") {
+		buf = std::cout.rdbuf();
+	} else {
+		of.open(output_file);
+		buf = of.rdbuf();
+	}
+	std::ostream jsonfile(buf);
+	jsonfile << results->to_json() << std::endl;
+	if (output_file != "") {
+		std::cerr << "Saved JSON file to " << output_file << " ." << std::endl;
+		std::cerr << "You can convert it to DOT by running python3 -m dublintraceroute plot " << output_file << std::endl;
+	}
 
 	std::exit(EXIT_SUCCESS);
 }
