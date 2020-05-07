@@ -277,7 +277,7 @@ You can see dublin-traceroute at work using the docker image [`insomniacslk/dubl
 Just run:
 
 ```
-sudo docker run -v "$PWD/output:/output" insomniacslk/dublin-traceroute
+docker run --rm -v "$PWD/output:/output" insomniacslk/dublin-traceroute
 ```
 
 This will run `dublin-traceroute 8.8.8.8` and produce output files in the `output` directory.

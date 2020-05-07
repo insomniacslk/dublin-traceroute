@@ -1,5 +1,9 @@
 language: cpp
 
+
+services:
+  - docker
+
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install_dependencies_linux.sh ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then .travis/install_dependencies_osx.sh ; fi
@@ -14,6 +18,20 @@ script:
 
 after_script:
   - ./dublin-traceroute
+
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: bash .travis/docker/publish.sh
+    on:
+      go: "1.14"
+      branch: master
+  - provider: script
+    skip_cleanup: true
+    script: bash .travis/docker/publish.sh
+    on:
+      go: "1.14"
+      tags: true
 
 sudo: required
 dist: bionic
