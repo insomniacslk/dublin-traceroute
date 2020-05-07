@@ -209,9 +209,9 @@ shared library and headers.
 make install # as root
 ```
 
-Note that if ```setcap``` is found when installing, it is used to set the
-```CAP_NET_RAW``` capability on the ```dublin-traceroute``` binary.
-This allows any regular user to run ```dublin-traceroute``` without root privileges
+Note that if `setcap` is found when installing, it is used to set the
+`CAP_NET_RAW` capability on the `dublin-traceroute` binary.
+This allows any regular user to run `dublin-traceroute` without root privileges
 but to be still able to use raw sockets, necessary to forge the traceroute packets.
 If ```setcap``` is not found, the set-uid bit is set. If you don't want any of these,
 you have to run it as root.
@@ -233,7 +233,7 @@ CXX=clang++ make
 
 ## Running
 
-`dublin-traceroute` requires raw sockets. This means that you should need the CAP_NET_RAW capability set (see `setcap(8)`). Alternatively you can run it as root, but this is not recommended, and `dublin-traceroute` will print a warning.
+`dublin-traceroute` requires raw sockets. This means that you should need the `CAP_NET_RAW` capability set (see `setcap(8)`). Alternatively you can run it as root, but this is not recommended, and `dublin-traceroute` will print a warning.
 
 The usage is very simple, and explained in the help message:
 
@@ -273,10 +273,13 @@ Additional features in the Python module at https://github.com/insomniacslk/pyth
 ## Running via Docker
 
 You can see dublin-traceroute at work using the docker image [`insomniacslk/dublin-traceroute`](https://cloud.docker.com/u/insomniacslk/repository/docker/insomniacslk/dublin-traceroute).
+
 Just run:
+
 ```
 sudo docker run -v "$PWD/output:/output" insomniacslk/dublin-traceroute
 ```
+
 This will run `dublin-traceroute 8.8.8.8` and produce output files in the `output` directory.
 
 ## What is missing?
