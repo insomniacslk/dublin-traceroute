@@ -11,4 +11,4 @@ if [ ! -d output ]
 then
     mkdir output
 fi
-docker run -v "${PWD}/output:/output" -it insomniacslk/dublin-traceroute $@
+docker run --rm -v "${PWD}/output:/output" -it insomniacslk/dublin-traceroute "$@"
