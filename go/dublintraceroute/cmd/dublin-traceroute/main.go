@@ -21,6 +21,8 @@ import (
 const (
 	ProgramName        = "Dublin Traceroute"
 	ProgramVersion     = "v0.1"
+	ProgramAuthorName  = "Andrea Barberio"
+	ProgramAuthorInfo  = "https://insomniac.slackware.it"
 	DefaultSourcePort  = 12345
 	DefaultDestPort    = 33434
 	DefaultNumPaths    = 10
@@ -94,7 +96,9 @@ func init() {
 
 	// handle flags
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of Dublin Traceroute\n")
+		fmt.Fprintf(os.Stderr, "Dublin Traceroute (Go implementation) %s\n", ProgramVersion)
+		fmt.Fprintf(os.Stderr, "Written by %s - %s\n", ProgramAuthorName, ProgramAuthorInfo)
+		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
 	// Args holds the program's arguments as parsed by `flag`
