@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"go/build"
 	"io/ioutil"
@@ -10,6 +9,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes/probev4"
@@ -97,17 +98,17 @@ func init() {
 		flag.PrintDefaults()
 	}
 	// Args holds the program's arguments as parsed by `flag`
-	flag.BoolVar(&Args.version, "version", false, "Print version and exit")
-	flag.IntVar(&Args.sport, "sport", DefaultSourcePort, "Set the base source port")
-	flag.BoolVar(&Args.useSrcport, "use-srcport", false, "Generate paths iterating on the source port instead of the destination port")
-	flag.IntVar(&Args.dport, "dport", DefaultDestPort, "Set the base destination port")
-	flag.IntVar(&Args.npaths, "npaths", DefaultNumPaths, "Set the number of paths to probe")
-	flag.IntVar(&Args.minTTL, "min-ttl", DefaultMinTTL, "Set the minimum TTL")
-	flag.IntVar(&Args.maxTTL, "max-ttl", DefaultMaxTTL, "Set the maximum TTL")
-	flag.IntVar(&Args.delay, "delay", DefaultDelay, "Set the inter-packet delay in msecs")
-	flag.BoolVar(&Args.brokenNAT, "broken-nat", false, "Use this when the network has a broken NAT. Useful when no results are shown after a certain TTL when they are expected")
-	flag.StringVar(&Args.outputFile, "output-file", DefaultOutputFile, "Output file name")
-	flag.BoolVar(&Args.v4, "force-ipv4", false, "Force the use of the legacy IPv4 protocol")
+	flag.BoolVarP(&Args.version, "version", "v", false, "print the version of Dublin Traceroute")
+	flag.IntVarP(&Args.sport, "sport", "s", DefaultSourcePort, "the source port to send packets from")
+	flag.IntVarP(&Args.dport, "dport", "d", DefaultDestPort, "the base destination port to send packets to")
+	flag.IntVarP(&Args.npaths, "npaths", "n", DefaultNumPaths, "the number of paths to probe")
+	flag.IntVarP(&Args.minTTL, "min-ttl", "t", DefaultMinTTL, "the minimum TTL to probe")
+	flag.IntVarP(&Args.maxTTL, "max-ttl", "T", DefaultMaxTTL, "the maximum TTL to probe")
+	flag.IntVarP(&Args.delay, "delay", "D", DefaultDelay, "the inter-packet delay in milliseconds")
+	flag.BoolVarP(&Args.brokenNAT, "broken-nat", "b", false, "the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected")
+	flag.BoolVarP(&Args.useSrcport, "use-srcport", "i", false, "generate paths using source port instead of destination port")
+	flag.StringVarP(&Args.outputFile, "output-file", "o", DefaultOutputFile, "the output file name")
+	flag.BoolVarP(&Args.v4, "force-ipv4", "4", false, "Force the use of the legacy IPv4 protocol")
 }
 
 func main() {
