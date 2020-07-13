@@ -36,6 +36,25 @@ using namespace Tins;
  *      }
  */
 
+enum probe_type {
+	// valid probe types must be within `min` and `max`, which are used for
+	// argument checking.
+	min,
+	// UDP over IPv4
+	UDPv4,
+	max,
+};
+
+inline
+const std::string
+probe_type_name(probe_type type) {
+	switch (type) {
+	case probe_type::UDPv4:
+		return "IPv4/UDP";
+	default:
+		return "<unknown probe type>";
+	}
+}
 
 class  DublinTraceroute {
 
@@ -43,6 +62,7 @@ private:
 	const uint16_t		 srcport_,
 				 dstport_;
 	const std::string	 dst_;
+	const probe_type	 type_;
 	IPv4Address		 target_;
 	const uint8_t		 npaths_,
 				 min_ttl_,
@@ -58,6 +78,7 @@ private:
 	const void		 validate_arguments();
 
 public:
+	static const probe_type  default_type = probe_type::UDPv4;
 	static const uint16_t	 default_srcport = 12345;
 	static const uint16_t	 default_dstport = 33434;
 	static const uint8_t	 default_npaths = 20;
@@ -69,6 +90,7 @@ public:
 	static const bool	 default_no_dns = false;
 	DublinTraceroute(
 			const std::string &dst,
+			const probe_type type = default_type,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
@@ -79,9 +101,10 @@ public:
 			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation,
 			const bool no_dns = default_no_dns
 			):
+				dst_(dst),
+				type_(type),
 				srcport_(srcport),
 				dstport_(dstport),
-				dst_(dst),
 				npaths_(npaths),
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
@@ -92,6 +115,7 @@ public:
 	{ validate_arguments(); }
 	DublinTraceroute(
 			const char *dst,
+			const probe_type type = default_type,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
 			const uint8_t npaths = default_npaths,
@@ -102,9 +126,10 @@ public:
 			const bool use_srcport_for_path_generation = default_use_srcport_for_path_generation,
 			const bool no_dns = default_no_dns
 		       ):
+				dst_(std::string(dst)),
+				type_(type_),
 				srcport_(srcport),
 				dstport_(dstport),
-				dst_(std::string(dst)),
 				npaths_(npaths),
 				min_ttl_(min_ttl),
 				max_ttl_(max_ttl),
@@ -115,9 +140,10 @@ public:
 	{ validate_arguments(); }
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
+		dst_(source.dst_),
+		type_(source.type_),
 		srcport_(source.srcport_),
 		dstport_(source.dstport_),
-		dst_(source.dst_),
 		npaths_(source.npaths_),
 		min_ttl_(source.min_ttl_),
 		max_ttl_(source.max_ttl_),
@@ -127,6 +153,8 @@ public:
 		no_dns_(source.no_dns_)
 	{ validate_arguments(); }
 
+	inline const std::string &dst() const { return dst_; }
+	inline const probe_type type() const { return static_cast<probe_type>(type_); }
 	inline const uint16_t srcport() const { return srcport_; }
 	inline const uint16_t dstport() const { return dstport_; }
 	inline const uint8_t npaths() const { return npaths_; }
@@ -136,7 +164,6 @@ public:
 	inline const bool broken_nat() const { return broken_nat_; }
 	inline const bool no_dns() const { return no_dns_; }
 	inline const bool use_srcport_for_path_generation() const { return use_srcport_for_path_generation_; }
-	inline const std::string &dst() const { return dst_; }
 	inline const IPv4Address &target() const { return target_; }
 	void target(const IPv4Address &addr) { target_ = addr; }
 	std::shared_ptr<TracerouteResults> traceroute();

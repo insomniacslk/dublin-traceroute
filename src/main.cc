@@ -77,6 +77,7 @@ Additional features in the Python module at https://github.com/insomniacslk/pyth
 int
 main(int argc, char **argv) {
 	std::string	target;
+	probe_type type = DublinTraceroute::default_type;
 	long	sport = DublinTraceroute::default_srcport;
 	long	dport = DublinTraceroute::default_dstport;
 	long	npaths = DublinTraceroute::default_npaths;
@@ -200,10 +201,11 @@ main(int argc, char **argv) {
 		std::exit(EXIT_FAILURE);
 	}
 
-	std::cerr << "Starting dublin-traceroute" << std::endl;
+	std::cerr << "Starting dublin-traceroute (probe type: " << probe_type_name(type) << ")" << std::endl;
 
 	DublinTraceroute Dublin(
 			target,
+			type,
 			sport,
 			dport,
 			npaths,
