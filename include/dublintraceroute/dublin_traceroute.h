@@ -127,7 +127,7 @@ public:
 			const bool no_dns = default_no_dns
 		       ):
 				dst_(std::string(dst)),
-				type_(type_),
+				type_(type),
 				srcport_(srcport),
 				dstport_(dstport),
 				npaths_(npaths),
