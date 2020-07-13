@@ -93,6 +93,10 @@ const void DublinTraceroute::validate_arguments() {
 		throw std::invalid_argument(
 			"delay must be between 0 and 1000 milliseconds");
 	}
+	if (type_ <= probe_type::min || type_ >= probe_type::max) {
+		throw std::invalid_argument(
+			"invalid probe type");
+	}
 }
 
 
