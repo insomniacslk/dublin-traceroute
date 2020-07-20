@@ -113,6 +113,7 @@ func init() {
 	flag.BoolVarP(&Args.useSrcport, "use-srcport", "i", false, "generate paths using source port instead of destination port")
 	flag.StringVarP(&Args.outputFile, "output-file", "o", DefaultOutputFile, "the output file name")
 	flag.BoolVarP(&Args.v4, "force-ipv4", "4", false, "Force the use of the legacy IPv4 protocol")
+	flag.CommandLine.SortFlags = false
 }
 
 func main() {
