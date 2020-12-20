@@ -5,13 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,26 +29,18 @@ var (
 
 var (
 	// TODO detect this at start-up
-	needSudo = true
+	needSudo = false
 
 	defaultDubTrTimeout = 10 * time.Second
 )
 
-// isCI returns true if the environment is a CI like Travis-CI or CircleCI,
-// false otherwise.
-func isCI() bool {
-	return os.Getenv("CI") == "true"
-}
-
 func setup() {
-	if isCI() {
-		cl := []string{"iptables", "-A", "OUTPUT", "-p", "udp", "--dport", "33434:33634", "-d", "8.8.8.8", "-j", "NFQUEUE", "--queue-num", strconv.FormatInt(NfQueueNum, 10)}
-		if needSudo {
-			cl = append([]string{"sudo"}, cl...)
-		}
-		if err := exec.Command(cl[0], cl[1:]...).Run(); err != nil {
-			log.Panicf("Failed to run iptables: %v", err)
-		}
+	cl := []string{"iptables", "-A", "OUTPUT", "-p", "udp", "--dport", "33434:33634", "-d", "8.8.8.8", "-j", "NFQUEUE", "--queue-num", strconv.FormatInt(NfQueueNum, 10)}
+	if needSudo {
+		cl = append([]string{"sudo"}, cl...)
+	}
+	if err := exec.Command(cl[0], cl[1:]...).Run(); err != nil {
+		log.Panicf("Failed to run iptables: %v", err)
 	}
 }
 
@@ -89,27 +80,25 @@ func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
 	defer cancel()
 
 	// run routest
-	riCmd := exec.Command("go", "install", "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/cmd/routest")
-	riCmd.Stdout, riCmd.Stderr = os.Stdout, os.Stderr
-	if err := riCmd.Run(); err != nil {
-		return nil, nil, fmt.Errorf("Cannot install routest: %v", err)
-	}
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = build.Default.GOPATH
-	}
-	cl := []string{path.Join(gopath, "bin/routest"), "-i", "lo", "-c", cfg.configFile, "-q", strconv.FormatInt(NfQueueNum, 10)}
+	cl := []string{"routest", "-i", "lo", "-c", cfg.configFile, "-q", strconv.FormatInt(NfQueueNum, 10)}
 	if needSudo {
 		cl = append([]string{"sudo"}, cl...)
 	}
+	log.Printf("Running routest with args %v", cl[1:])
 	rCmd := exec.CommandContext(ctx, cl[0], cl[1:]...)
 	rCmd.Stdout, rCmd.Stderr = os.Stdout, os.Stderr
+	var routestTerminatedCorrectly int32
 	defer func() {
-		_ = rCmd.Process.Kill()
+		if err := rCmd.Process.Kill(); err != nil {
+			log.Panicf("Failed to terminate routest process: %v", err)
+		} else {
+			atomic.StoreInt32(&routestTerminatedCorrectly, 1)
+		}
 	}()
 	go func() {
-		if err := rCmd.Run(); err != nil {
-			log.Printf("Error returned from command %+v: %v", rCmd, err)
+		err := rCmd.Run()
+		if err != nil && atomic.LoadInt32(&routestTerminatedCorrectly) != 1 {
+			log.Panicf("Error returned from command %+v: %v", rCmd, err)
 		}
 	}()
 	// wait a second to give routest time to start
@@ -145,6 +134,7 @@ func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
 	}
 	cl = append(cl, "-o", traceFile)
 	cl = append(cl, cfg.target)
+	log.Printf("Running dublin-traceroute with args %v", cl[1:])
 	dCmd := exec.CommandContext(ctx, cl[0], cl[1:]...)
 	var outWriter bytes.Buffer
 	dCmd.Stdout, dCmd.Stderr = &outWriter, os.Stderr

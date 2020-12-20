@@ -1,0 +1,60 @@
+# docker build -t insomniacslk/dublin-traceroute-integ -f Dockerfile .
+
+
+FROM ubuntu:20.10
+
+LABEL BUILD="docker build -t insomniacslk/dublin-traceroute-integ -f Dockerfile.integ ."
+# --privileged required for nfqueue
+LABEL RUN="docker run --rm --privileged -it insomniacslk/dublin-traceroute-integ"
+
+# Install dependencies
+RUN apt-get update &&                          \
+    apt-get install -y --no-install-recommends \
+        sudo \
+        # to fetch the Go toolchain
+        ca-certificates \
+        wget \
+        # for go get
+        git \
+        # for routest
+        iptables \
+        # for dublin-traceroute
+        build-essential cmake \
+        pkg-config libtins-dev libjsoncpp-dev \
+        && \
+    rm -rf /var/lib/apt/lists/*
+
+# install Go
+WORKDIR /tmp
+RUN set -exu; \
+    wget https://golang.org/dl/go1.15.6.linux-amd64.tar.gz ;\
+    tar -C / -xvzf go1.15.6.linux-amd64.tar.gz
+ENV PATH="$PATH:/go/bin:/build/bin"
+ENV GOPATH=/go/path:/build
+
+ENV PROJDIR=/build/src/github.com/insomniacslk/dublin-traceroute
+RUN mkdir -p $PROJDIR
+COPY . $PROJDIR
+
+# build and install routest
+WORKDIR /build/src
+RUN set -exu; \
+    cd $PROJDIR/go/dublintraceroute/cmd/routest ;\
+    go get -v ./... ;\
+    go build ;\
+    go install .
+
+# build dublin-traceroute
+RUN set -exu ;\
+    cd $PROJDIR ;\
+    rm -rf build; mkdir build; cd build ;\
+    cmake .. ;\
+    make ;\
+    make install
+
+# run tests
+RUN set -exu ;\
+    go get -v -t github.com/stretchr/testify
+
+CMD set -exu ;\
+    timeout 60 go test -v -race -coverprofile=/build/coverage/profile.out -covermode=atomic github.com/insomniacslk/dublin-traceroute/integ
