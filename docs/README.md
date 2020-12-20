@@ -9,50 +9,55 @@ https://blog.dublin-traceroute.net .
 
 **Dublin Traceroute is a NAT-aware multipath tracerouting tool**
 
-### Again.. what?
+Modern networks leverage [Equal-cost Multi-Path routing](https://en.wikipedia.org/wiki/Equal-cost_multi-path_routing)
+for load balancing, reliability, and network capacity reasons.
+Traditional traceroute may provide hard-to-interpret or even misleading results
+when used in presence of ECMP routing. Tools like
+[paris-traceroute](https://paris-traceroute.net) were created to address this
+issue. Dublin Traceroute:
+* adds a new NAT detection technique on top of that
+* introduces visualization and analysis tools (via its [Python
+  bindings](https://github.com/insomniacslk/python-dublin-traceroute))
+* provides a modular and reusable library for easier integration.
 
-You know, networks are way more complex now than years ago, and there can be
-multiple paths between two network entities (like your phone, your laptop,
-some remote server, etc). This way of routing packets is called
-[ECMP](https://en.wikipedia.org/wiki/Equal-cost_multi-path_routing),
-or Equal-Cost MultiPath, and is used to increase the capacity and the
-reliability of a network.  
-Running a regular traceroute in an ECMP-enabled network can cause headache, so
-tools like [paris-traceroute](http://paris-traceroute.net) exist.
+Dublin Traceroute is released under the [2-clause BSD license](http://opensource.org/licenses/BSD-2-Clause)).
+
 
 ### How does it work?
 
 Dublin Traceroute uses the techniques invented by the authors of
 [Paris-traceroute](http://paris-traceroute.net) to enumerate the paths of ECMP
-flow-based load balancing, but introduces a new technique for NAT detection.
+flow-based load balancing, and introduces a new technique for NAT detection.
 
-For what matters the multi-path enumeration, there is a nice explanation on
-[Paris-traceroute's about page](http://paris-traceroute.net/about). In short,
-anyway, an IP packet travelling between two hosts may take different paths
-depending on whether (and how) the intermediate routers implement load
-balancing. This load balancing, as mentioned above, is called ECMP.
-The problem with ECMP and traceroute is that a regular traceroute cannot tell
-which path an hop corresponds to.
+The multipath enumeration is explained at
+[http://paris-traceroute.net/about](http://paris-traceroute.net/about), which I
+recommend to read.
+In short, IP packets travelling from host A to host B may take different paths
+depending on the presence of ECMP routing. Given that now there are multiple
+equal-cost paths between A and B, traditional traceroute cannot force packets
+through a unique path, and cannot distinguish which path each packet belongs to.
+
 A visual example will make it easier to understand:
 
-![multipath network](tr01.png)  
+![multipath network](tr01.png)
 [[diagram source]](tr01.dot)
 
-In the graph above it's easy to see that there are more than one "second hop" or
-"third hop" and so on. A regular traceroute is not able to force all the packets
-throuh the same path, so it may traverse the paths in an irregular way, for
-example:
+In the above graph you can see that there are two "first hops", namely B and C.
+The same thing for the "second hops" (D and E), and a packet either traverses B
+-> D -> F, or traverses C -> E -> F.
+Traditional traceroute has no knowledge that a packet may traverse multiple
+paths
 
-![regular traceroute on an ECMP network](tr02.png)  
+![regular traceroute on an ECMP network](tr02.png)
 [[diagram source]](tr02.dot)
 
-The black links are the possible paths, the red link is what a regular
-traceroute may see.
+The black arrows in the above graph indicate the possible network paths, the red
+arrows show a possible path that traditional traceroute may show you instead of the
+correct ones.
 
-This is of course wrong. It gets ever worse when two equal cost paths have
-different lengths:
+It gets worse when two equal-cost paths have different lengths:
 
-![regular traceroute on variable-length ECMP network](tr03.png)  
+![regular traceroute on variable-length ECMP network](tr03.png)
 [[diagram source]](tr03.dot)
 
 The team who created Paris-traceroute invented a technique that leverages the ECMP
@@ -63,39 +68,51 @@ Paris-traceroute can do, plus a bit more.
 
 Three things:
 
-**One is the way NATs are detected.**  
-Dublin Traceroute forges the IP ID **in the probe packet** and analyzes the
-responses in order to detect all the encountered NATs.
-This is a new algorithm, not found in other network mapping
-solutions, despite the IP ID is not new for NAT-related tasks.
-For example, Paris-traceroute uses the IP ID to tell whether a loop in a traceroute
-is due to a NAT box, using the IP ID **of the response packet** as explained by
-Steven Bellovin in his paper
+**It can detect NATs.**
+Dublin Traceroute can detect whether a traceroute is traversing NATs. For
+example, if your home router hides your network behind a NAT, Dublin Traceroute
+will detect that, and will also detect other NATs that are being traversed (e.g.
+your ISP's CGNAT).
+
+To detect NATs, Dublin Traceroute forges a custom IP ID in the outgoing packets,
+and keeps track of them in the response packets.
+If the response packet references an outgoing packet with different
+source/destination IP addresses and ports, this may indicate the presence of a
+NAT. In that case, the packet referenced in the response will be different from
+the one that was sent, and cannot be correlated anymore. However, the IP ID is
+expected to be unchanged (thanks to the presence of the `don't-fragment` bit), and
+it will contain a value to correlate it to one of the outgoing packets.
+
+Note that this technique is different from Steven Bellovin's
 [A technique for Counting NATted Hosts](https://www.cs.columbia.edu/~smb/papers/fnat.pdf).
 
-I make this distinction because you may claim that Paris-traceroute already
-detects NAT boxes, but this is actually very different: Paris-traceroute can
-tell you whether a hop that appears as a loop in a traceroute is due to NAT,
-while Dublin Traceroute can tell you whether there is a NAT after a given point,
-and can also identify multiple NATs.
-At the best of my knowledge, there is no tool nor public research using this
-technique. If I am wrong, please let me know so that I can give the credit where
-due.
+At the best of my knowledge, there is no prior technique like this. If I am wrong,
+please let me know so that I can give credit where due.
 
 
-**The second is that it is a modular rewrite.**  
-Dublin Traceroute is written in C++11 on top of a beautiful network packet sniffing and
-crafting library, [libtins](https://libtins.github.io).
-Dublin Traceroute also features a Python extension on top of the C++ core if you
-prefer. The bindings now live in a separate repository, see
-[python-dublin-traceroute](https://github.com/insomniacslk/python-dublin-traceroute) .
+**It is modular and reusable.**
+Dublin Traceroute is implemented as a library and a command-line tool, making it
+easy to reuse in your projects.
+The results are encoded in JSON format, so you can easily integrate them in your
+own application.
 
-**The third is that it supports broken NATs.**
+The core library and CLI are writteh in C++1, using the beautiful network packet library
+[libtins](https://libtins.github.io).
+
+If you prefer to use Python, or if you need graphical visualization and data
+analysis, you can use [the Python bindings](https://github.com/insomniacslk/python-dublin-traceroute).
+
+There is also a Go implementation in this repository, which I use for
+experimentation. The Go implementation has feature parity with the C++ one, and
+adds IPv6 UDP support. However the C++ implementation is the main one, and
+every new feature will be eventually backported to it.
+
+**It supports certain types of broken NATs.**
 Dublin Traceroute is able to work with some broken NATs that some hosting providers use
-(~e.g. I found that Scaleway does that~ update: they fixed it, see https://github.com/insomniacslk/dublin-traceroute/issues/28). Neither paris-traceroute nor regular traceroute
-would work with it, but it's not their fault as this is a network misconfiguration. When
-you run a regular traceroute or paris-traceroute through this kind of NAT, you will see
-no response from all the hops located just after these broken NAT boxes.
+( ~~e.g. I found that Scaleway does that~~ update: they fixed it, see https://github.com/insomniacslk/dublin-traceroute/issues/28).
+When you run through this kind of NAT, you will see that neither traditional traceroute
+nor paris-traceroute show responses beyond that point, even if those response packets
+arrived back.
 
 See the [examples](examples.md) to see Dublin Traceroute at work.
 
@@ -104,11 +121,9 @@ See the [examples](examples.md) to see Dublin Traceroute at work.
 Paris-traceroute is a nice tool, and the research behind it is really cool. The
 implementation is a good proof-of-concept, but I needed more.
 
-It all started as an excuse to learn more about C++11. My curiosity started after
-finding a packet sniffing and crafting library that caught my attention. So I
-decided to write a C++11 implementation of Paris-traceroute, but I wanted it to
-be flexible, expressive and simple to understand. I have hence created a C++
-shared library and a Python module to make it easily usable and embeddable.
+It all started as an excuse to learn more about C++11. Then I found libtins, so I
+decided to write a C++11 implementation of paris-traceroute. I wanted it to
+be flexible, expressive and simple to understand.
 
 ## Examples
 
@@ -125,9 +140,10 @@ Dublin Traceroute aims to be:
 
 * fast
 * easy to use
-* multi-language (currently C++ and Python, plus a command-line tool)
+* multi-language (currently C++ and Python, plus an experimental Go
+  implementation)
 * multi-platform: any system with a reasonable C++11 compiler will work
-* accurate
+* accurate: the reported paths should be as close as possible to the reality
 * visual: it can generate diagrams from the traceroute data
 * robust: no memory leaks, no crashes
 * usable in larger systems
@@ -138,30 +154,31 @@ Dublin Traceroute aims to be:
 
 ### From packages
 
-Dublin Traceroute is packaged in Debian and Ubuntu, yet still in the testing repos. To install it (as root):
+Dublin Traceroute is packaged in several Linux distributions.
 
-on Debian:
+**Debian, Ubuntu, or any other Debian-based system**
+```
+apt install dublin-traceroute
+```
 
-* enable the `testing` repository, with something like `echo "deb http://httpredir.debian.org/debian testing main" > /etc/apt/sources.list.d/debian-unstable.list`
-* `apt-get install dublin-traceroute`
+https://tracker.debian.org/pkg/dublin-traceroute
+https://packages.ubuntu.com/search?keywords=dublin-traceroute
 
-or alternatively without adding the repository:
 
-`apt-get install dublin-traceroute -t testing`
+**ArchLinux**
+```
+pacman install dublin-traceroute
+```
 
-on Ubuntu:
+https://aur.archlinux.org/packages/dublin-traceroute/
 
-* add the `proposed` repository, following the instructions at https://wiki.ubuntu.com/Testing/EnableProposed
-* `apt-get install dublin-traceroute`
+**Fedora, RedHat, CentOS**
 
-on CentOS 7:
+Use the `teknoraver/networking` COPR at https://copr.fedorainfracloud.org/coprs/teknoraver/networking/
 
-* (EDIT: this repo is no more, see next step) ~~copy the [dublin-traceroute repository configuration](dublin-traceroute.repo) to `/etc/yum.repos.d/`~~
-* add the `teknoraver/networking` COPR, https://copr.fedorainfracloud.org/coprs/teknoraver/networking/
-* yum update
-* yum install dublin-traceroute
+Then `yum update` and `yum install dublin-traceroute` (replace with `dnf` where
+relevant).
 
-Sorry, no GPG verification yet, and no CentOS 6 yet :(
 
 ### From source
 
@@ -169,7 +186,7 @@ Independently of the OS, to build dublin-traceroute you need:
   * cmake
   * gcc >= 4.9 or clang >= 3.8
 
-#### Building on Linux
+#### On Linux
 
 * Install [libtins](https://github.com/mfontanini/libtins) 3.4+ from source
 * Install [jsoncpp](https://github.com/open-source-parsers/jsoncpp) from source
@@ -190,7 +207,7 @@ cmake ..
 make
 ```
 
-#### Building on macOS
+#### On macOS
 
 You need the latest XCode installed to build this project. Then run:
 ```bash
@@ -198,6 +215,14 @@ brew install https://raw.githubusercontent.com/insomniacslk/dublin-traceroute/ma
 ```
 
 This will be as simple as `brew install dublin-traceroute` after https://github.com/Homebrew/homebrew/pull/50000 will be merged.
+
+Please [file an issue](https://github.com/insomniacslk/dublin-traceroute/issues/new/choose) with the necessary details if this doesn't work for you.
+
+
+### On Windows
+
+Windows is not supported at this stage. If you are willing to port
+`dublin-traceroute` on Windows, please do!
 
 #### Installing
 
