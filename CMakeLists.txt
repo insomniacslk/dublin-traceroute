@@ -1,5 +1,18 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.16)
 project (dublin-traceroute)
+
+IF(APPLE)
+    # macOS Mojave is not using /usr/include anymore, see https://github.com/neovim/neovim/issues/9050
+    if(NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET} AND NOT DEFINED ENV{SDKROOT})
+        set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET ${CMAKE_SYSTEM_VERSION})
+    ENDIF()
+    # assume built-in pthreads on MacOS
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
 
 # TODO sync this with VERSION in include/dublintraceroute/common.h
 set (dublin-traceroute_VERSION_MAJOR_0)
@@ -53,6 +66,12 @@ target_link_libraries(dublintraceroute tins)
 
 target_link_libraries(dublintraceroute ${JSONCPP_LIBRARIES} jsoncpp)
 target_include_directories(dublintraceroute PUBLIC ${JSONCPP_INCLUDE_DIRS} ${TINS_INCLUDE_DIRS})
+
+if(APPLE)
+    # with macOS Mojave /usr/local/{include,lib} have to be specified explicitly
+    target_include_directories(dublintraceroute PUBLIC /usr/local/include)
+    target_link_libraries(dublintraceroute /usr/local/lib)
+endif(APPLE)
 
 #set_property(TARGET dublintraceroute PROPERTY CXX_STANDARD 11)
 #set_property(TARGET dublintraceroute PROPERTY CXX_STANDARD_REQUIRED ON)

@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  integ:
+    privileged: true
+    build:
+      context: .
+      dockerfile: Dockerfile.integ
+    volumes:
+      - .:/build/coverage

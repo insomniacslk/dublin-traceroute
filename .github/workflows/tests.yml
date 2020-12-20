@@ -1,0 +1,144 @@
+name: Tests
+
+on: [push, pull_request]
+
+
+jobs:
+  build_cpp:
+    runs-on: ${{ matrix.cfg.os }}
+    strategy:
+      matrix:
+        cfg:
+          - {
+              os: ubuntu-latest,
+              cpp-version: g++
+            }
+          - {
+              os: ubuntu-latest,
+              cpp-version: clang++
+            }
+          - {
+              os: macos-latest,
+              cpp-version: clang++
+            }
+    steps:
+      - uses: actions/checkout@v2
+      - if: matrix.cfg.os == 'ubuntu-latest'
+        name: Build on Ubuntu
+        env:
+          CXX: ${{ matrix.cfg.cpp-version}}
+        run: |
+          sudo apt install libtins-dev libjsoncpp-dev libpcap-dev # pcap required for libtins
+          mkdir build
+          cd build
+          cmake ..
+          make VERBOSE=1
+          ./dublin-traceroute -v
+      - if: matrix.cfg.os == 'macos-latest'
+        name: Build on macOS
+        env:
+          CXX: ${{ matrix.cfg.cpp-version}}
+        run: |
+          brew update
+          brew install libtins jsoncpp
+          mkdir build
+          cd build
+          cmake ..
+          make
+          ./dublin-traceroute -v
+  build_go:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.14', '1.15']
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # clone in the gopath
+          path: src/github.com/${{ github.repository }}
+      - uses: actions/setup-go@v2
+        with:
+          stable: false
+          go-version: ${{ matrix.go }}
+      - run: |
+          echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+      - run: |
+          cd $GITHUB_WORKSPACE/src/github.com/${{ github.repository }}/go/dublintraceroute/cmd/dublin-traceroute
+          go get -v ./...
+          go build
+          ./dublin-traceroute --version
+  test_go:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.14', '1.15']
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # clone in the gopath
+          path: src/github.com/${{ github.repository }}
+      - uses: actions/setup-go@v2
+        with:
+          stable: false
+          go-version: ${{ matrix.go }}
+      - run: |
+          echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+      - run: |
+          cd $GITHUB_WORKSPACE/src/github.com/${{ github.repository }}/go/dublintraceroute/cmd/dublin-traceroute
+          go get -v -t ./...
+          echo "" > coverage.txt
+          for d in $(go list ./...); do
+              go test -race -coverprofile=profile.out -covermode=atomic "${d}"
+              if [ -f profile.out ]; then
+                cat profile.out >> coverage.txt
+                rm profile.out
+              fi
+          done
+          bash <(curl -s https://codecov.io/bash) -c -f coverage.txt -F unittest
+  test_cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          stable: "false"
+          go-version: "1.15"
+      - name: Run Tests
+        run: |
+          sudo apt install libtins-dev libjsoncpp-dev libpcap-dev googletest
+          git submodule init
+          git submodule update
+          mkdir build
+          cd build
+          cmake ..
+          make tests
+          make test
+  integ:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.15']
+    env:
+      DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKER_PASS: ${{ secrets.DOCKERHUB_PASSWORD }}
+    steps:
+      - run: |
+          echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "COMPOSE_FILE=$GITHUB_WORKSPACE/src/github.com/${{ github.repository }}/docker-compose.yml" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+        with:
+          # clone in the gopath
+          path: src/github.com/${{ github.repository }}
+      - uses: actions/setup-go@v2
+        with:
+          stable: false
+          go-version: ${{ matrix.go }}
+      - name: Login to Docker hub
+        run: docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - name: Build docker image
+        run: docker-compose -f $COMPOSE_FILE build
+      - name: Run integ tests
+        run: docker-compose -f $COMPOSE_FILE up --abort-on-container-exit
+      - name: publish coverage data
+        run: |
+          bash <(curl -s https://codecov.io/bash) -c -f coverage_integ.txt -F integ
