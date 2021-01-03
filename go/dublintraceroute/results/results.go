@@ -48,12 +48,12 @@ type MPLSLabel struct {
 	TTL           uint8  `json:"ttl"`
 }
 
-// UnixMsec is UNIX time in the form sec.usec
-type UnixMsec time.Time
+// UnixUsec is UNIX time in the form sec.usec
+type UnixUsec time.Time
 
-// UnmarshalJSON deserializes a seconds.microseconds timestamp into an UnixMsec
+// UnmarshalJSON deserializes a seconds.microseconds timestamp into an UnixUsec
 // object. The timestamp can be optionally surrounded by double quotes.
-func (um *UnixMsec) UnmarshalJSON(b []byte) error {
+func (um *UnixUsec) UnmarshalJSON(b []byte) error {
 	s := string(b)
 	// strip quotes, if any
 	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
@@ -67,27 +67,45 @@ func (um *UnixMsec) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid seconds in timestamp %s: %v", s, err)
 	}
-	msec, err := strconv.ParseInt(split[1], 10, 64)
+	if len(split[1]) > 6 {
+		// truncate string, we only want down to microseconds
+		split[1] = split[1][:6]
+	}
+	dec, err := strconv.ParseInt(split[1], 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid decimal string in timestamp %s: %v", s, err)
+	}
+	if dec > 999999 {
+		return fmt.Errorf("invalid decimal string in timestamp %s: too large", s)
+	}
+	// right-pad decimal string with zeros
+	decStr := split[1]
+	if len(split[1]) < 6 {
+		decStr += strings.Repeat("0", 6-len(split[1]))
+	}
+	// now that it's correctly padded, parse it again
+	usec, err := strconv.ParseInt(strings.TrimRight(decStr, " "), 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid microseconds in timestamp %s: %v", s, err)
 	}
-	if msec > 999999 {
+
+	if usec > 999999 {
 		return fmt.Errorf("invalid microseconds in timestamp %s: too large", s)
 	}
-	*um = UnixMsec(time.Unix(sec, msec*1000))
+	*um = UnixUsec(time.Unix(sec, usec*1000))
 	return nil
 }
 
-// MarshalJSON serializes an UnixMsec object into a seconds.microseconds
+// MarshalJSON serializes an UnixUsec object into a seconds.microseconds
 // representation.
-func (um UnixMsec) MarshalJSON() ([]byte, error) {
+func (um UnixUsec) MarshalJSON() ([]byte, error) {
 	u := time.Time(um).UnixNano() / 1000
-	return []byte(fmt.Sprintf("%d.06%d", u/1000000, u%1000000)), nil
+	return []byte(fmt.Sprintf("%d.%06d", u/1e6, u%1e6)), nil
 }
 
 // Packet represents some information of a sent or received packet.
 type Packet struct {
-	Timestamp UnixMsec `json:"timestamp"`
+	Timestamp UnixUsec `json:"timestamp"`
 	IP        IP       `json:"ip"`
 	UDP       *UDP     `json:"udp,omitempty"`
 	ICMP      *ICMP    `json:"icmp,omitempty"`
