@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -31,7 +32,9 @@ var (
 	// TODO detect this at start-up
 	needSudo = false
 
-	defaultDubTrTimeout = 10 * time.Second
+	defaultDubTrTimeout     = 10 * time.Second
+	goDublinTraceroutePath  = "../go/dublintraceroute/cmd/dublin-traceroute/dublin-traceroute"
+	cppDublinTraceroutePath = "../build/dublin-traceroute"
 )
 
 func setup() {
@@ -39,6 +42,7 @@ func setup() {
 	if needSudo {
 		cl = append([]string{"sudo"}, cl...)
 	}
+	log.Printf("Running %v", cl)
 	if err := exec.Command(cl[0], cl[1:]...).Run(); err != nil {
 		log.Panicf("Failed to run iptables: %v", err)
 	}
@@ -70,7 +74,7 @@ type testConfig struct {
 	target  string
 }
 
-func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
+func runWithConfig(useGoImplementation bool, cfg testConfig) ([]byte, []byte, error) {
 	// validate to config
 	if cfg.timeout <= 0 {
 		cfg.timeout = defaultDubTrTimeout
@@ -113,7 +117,11 @@ func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
 	if needSudo {
 		cl = append([]string{"sudo"}, cl...)
 	}
-	cl = append(cl, "../build/dublin-traceroute")
+	executable := cppDublinTraceroutePath
+	if useGoImplementation {
+		executable = goDublinTraceroutePath
+	}
+	cl = append(cl, executable)
 	if cfg.paths != nil {
 		cl = append(cl, "-n", strconv.FormatInt(int64(*cfg.paths), 10))
 	}
@@ -133,8 +141,17 @@ func runWithConfig(cfg testConfig) ([]byte, []byte, error) {
 		cl = append(cl, "-D", strconv.FormatInt(int64(*cfg.delay), 10))
 	}
 	cl = append(cl, "-o", traceFile)
+	if useGoImplementation {
+		a := net.ParseIP(cfg.target)
+		if a == nil {
+			log.Panicf("Invalid IP address: %s", cfg.target)
+		}
+		if a.To4() != nil {
+			cl = append(cl, "--force-ipv4")
+		}
+	}
 	cl = append(cl, cfg.target)
-	log.Printf("Running dublin-traceroute with args %v", cl[1:])
+	log.Printf("Running %s with args %v", executable, cl[1:])
 	dCmd := exec.CommandContext(ctx, cl[0], cl[1:]...)
 	var outWriter bytes.Buffer
 	dCmd.Stdout, dCmd.Stderr = &outWriter, os.Stderr
@@ -168,30 +185,37 @@ func requireEqualResults(t *testing.T, got, want *results.Results) {
 			require.Equal(t, wantReply.IsLast, gotReply.IsLast)
 			// accept 20 msec of difference
 			require.InDelta(t, wantReply.RttUsec, gotReply.RttUsec, 20000.)
+
 			// match Sent packet, ignoring Timestamp, IP.SrcIP
-			require.NotNil(t, gotReply.Sent, "Sent is nil")
-			require.NotNil(t, gotReply.Sent.IP, "Sent.IP not nil")
-			require.Equal(t, wantReply.Sent.IP.DstIP, gotReply.Sent.IP.DstIP, "Sent.IP.DstIP")
-			require.Equal(t, wantReply.Sent.IP.ID, gotReply.Sent.IP.ID, "Sent.IP.ID")
-			require.Equal(t, wantReply.Sent.IP.TTL, gotReply.Sent.IP.TTL, "Sent.IP.TTL")
-			require.Equal(t, wantReply.Sent.UDP, gotReply.Sent.UDP, "Sent.UDP")
-			// ICMP should be nil
-			require.Nil(t, gotReply.Sent.ICMP, "Sent.ICMP not nil")
+			require.NotNil(t, gotReply.Sent, "Sent packet should be not-nil")
+			require.NotNil(t, gotReply.Sent.IP, "Sent.IP should be not-nil")
+			require.Equal(t, wantReply.Sent.IP.DstIP, gotReply.Sent.IP.DstIP, "Sent.IP.DstIP does not match")
+			require.Equal(t, wantReply.Sent.IP.ID, gotReply.Sent.IP.ID, "Sent.IP.ID does not match")
+			require.Equal(t, wantReply.Sent.IP.TTL, gotReply.Sent.IP.TTL, "Sent.IP.TTL does not match")
+			require.Equal(t, wantReply.Sent.UDP, gotReply.Sent.UDP, "Sent.UDP does not match")
+			// sent ICMP
+			require.Nil(t, gotReply.Sent.ICMP, "Sent.ICMP should be nil")
+
 			// match Received packet, ignoring Timestamp, IP.DstIP, IP.ID,
-			// IP.TTL
-			require.NotNil(t, gotReply.Received, "Received is nil")
-			require.NotNil(t, gotReply.Received.IP, "Received.IP is nil")
-			require.Equal(t, wantReply.Received.IP.SrcIP, gotReply.Received.IP.SrcIP, "Received.IP.SrcIP")
-			// UDP should be nil
-			require.Equal(t, wantReply.Received.UDP, gotReply.Received.UDP, "Received.UDP")
-			require.Nil(t, gotReply.Received.UDP, "Received.UDP is not nil")
-			require.Equal(t, wantReply.Received.ICMP, gotReply.Received.ICMP, "Received.ICMP")
+			// received IP must be non-nil
+			require.NotNil(t, gotReply.Received, "Received should be not-nil")
+			require.NotNil(t, gotReply.Received.IP, "Received.IP should be not-nil")
+			require.Equal(t, wantReply.Received.IP.SrcIP, gotReply.Received.IP.SrcIP, "Received.IP.SrcIP does not match")
+			// received UDP is not guaranteed to be in the response, it is safe
+			// to skip this check.
+			// received ICMP
+			require.NotNil(t, gotReply.Received.ICMP, "Received.ICMP should not be nil")
+			require.Equal(t, wantReply.Received.ICMP.Code, gotReply.Received.ICMP.Code, "Received.ICMP.Code does not match")
+			require.Equal(t, wantReply.Received.ICMP.Type, gotReply.Received.ICMP.Type, "Received.ICMP.Type does not match")
+			// TODO test MPLS extension
+
+			// check for zero-ttl forwarding bug
 			require.Equal(t, wantReply.ZeroTTLForwardingBug, gotReply.ZeroTTLForwardingBug, "ZeroTTLForwardingBug")
 		}
 	}
 }
 
-func TestGoogleDNSOnePath(t *testing.T) {
+func testGoogleDNSOnePath(t *testing.T, useGoImplementation bool) {
 	wantJSON, err := ioutil.ReadFile("test_data/want_8.8.8.8_one_path.json")
 	require.NoError(t, err)
 	c := testConfig{
@@ -199,7 +223,7 @@ func TestGoogleDNSOnePath(t *testing.T) {
 		paths:      &one,
 		target:     "8.8.8.8",
 	}
-	_, gotJSON, err := runWithConfig(c)
+	_, gotJSON, err := runWithConfig(useGoImplementation, c)
 	require.NoError(t, err)
 	var want, got results.Results
 	err = json.Unmarshal(wantJSON, &want)
@@ -208,4 +232,12 @@ func TestGoogleDNSOnePath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(want.Flows), len(got.Flows))
 	requireEqualResults(t, &got, &want)
+}
+
+func TestGoogleDNSOnePathCPP(t *testing.T) {
+	testGoogleDNSOnePath(t, false)
+}
+
+func TestGoogleDNSOnePathGo(t *testing.T) {
+	testGoogleDNSOnePath(t, true)
 }

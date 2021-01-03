@@ -12,11 +12,11 @@
 				{
 					"icmp" : 
 					{
-						"code" : 11,
+						"code" : 0,
 						"description" : "TTL expired in transit",
 						"extensions" : [],
 						"mpls_labels" : [],
-						"type" : 0
+						"type" : 11
 					},
 					"ip" : 
 					{
@@ -54,11 +54,11 @@
 				{
 					"icmp" : 
 					{
-						"code" : 11,
+						"code" : 0,
 						"description" : "TTL expired in transit",
 						"extensions" : [],
 						"mpls_labels" : [],
-						"type" : 0
+						"type" : 11
 					},
 					"ip" : 
 					{
@@ -96,11 +96,11 @@
 				{
 					"icmp" : 
 					{
-						"code" : 11,
+						"code" : 0,
 						"description" : "TTL expired in transit",
 						"extensions" : [],
 						"mpls_labels" : [],
-						"type" : 0
+						"type" : 11
 					},
 					"ip" : 
 					{

@@ -1,6 +1,3 @@
-# docker build -t insomniacslk/dublin-traceroute-integ -f Dockerfile .
-
-
 FROM ubuntu:20.10
 
 LABEL BUILD="docker build -t insomniacslk/dublin-traceroute-integ -f Dockerfile.integ ."
@@ -44,13 +41,19 @@ RUN set -exu; \
     go build ;\
     go install .
 
-# build dublin-traceroute
+# build dublin-traceroute (CPP)
 RUN set -exu ;\
     cd $PROJDIR ;\
     rm -rf build; mkdir build; cd build ;\
     cmake .. ;\
     make ;\
     make install
+
+# build dublin-traceroute (Go)
+RUN set -exu ;\
+    cd $PROJDIR/go/dublintraceroute/cmd/dublin-traceroute ;\
+    go get -v ./... ;\
+    go build
 
 # run tests
 RUN set -exu ;\

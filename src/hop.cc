@@ -217,8 +217,8 @@ Json::Value Hop::to_json() {
 		// ICMP layer
 		try {
 			auto icmp = received()->rfind_pdu<ICMP>();
-			root["received"]["icmp"]["type"] = static_cast<int>(icmp.code());
-			root["received"]["icmp"]["code"] = static_cast<int>(icmp.type());
+			root["received"]["icmp"]["type"] = static_cast<int>(icmp.type());
+			root["received"]["icmp"]["code"] = static_cast<int>(icmp.code());
 			root["received"]["icmp"]["description"] = icmpm.get(icmp.type(), icmp.code());
 			root["received"]["icmp"]["extensions"] = Json::Value(Json::arrayValue);
 			root["received"]["icmp"]["mpls_labels"] = Json::Value(Json::arrayValue);
