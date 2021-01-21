@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   common.h
  * \author Andrea Barberio <insomniac@slackware.it>

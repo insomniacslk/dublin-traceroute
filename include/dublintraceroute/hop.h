@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   hop.h
  * \Author Andrea Barberio <insomniac@slackware.it>

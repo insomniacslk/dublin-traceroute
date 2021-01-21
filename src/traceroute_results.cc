@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   traceroute_results.cc
  * \author Andrea Barberio <insomniac@slackware.it>

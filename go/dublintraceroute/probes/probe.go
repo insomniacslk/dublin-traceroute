@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 package probes
 
 // Probe represents a sent probe. Every protocol-specific probe has to implement

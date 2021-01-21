@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
 # This file is shamelessly copied and modified from libtins.
 # Use dublintraceroute's include directories + test include directories
 INCLUDE_DIRECTORIES(

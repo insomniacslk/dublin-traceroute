@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   dublin_traceroute.h
  * \author Andrea Barberio <insomniac@slackware.it>

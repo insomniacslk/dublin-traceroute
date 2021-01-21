@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   icmp_messages.h
  * \Author Andrea Barberio <insomniac@slackware.it>
