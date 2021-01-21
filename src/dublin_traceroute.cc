@@ -118,9 +118,9 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 
 	// Resolve the target host
 	try {
-		target(Utils::resolve_domain(dst()));
+		target(Tins::Utils::resolve_domain(dst()));
 	} catch (std::runtime_error) {
-		target(IPv4Address(dst()));
+		target(Tins::IPv4Address(dst()));
 	}
 
 	uint16_t num_packets = (max_ttl() - min_ttl() + 1) * npaths();
@@ -172,9 +172,9 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 				} else if (buf[0] >> 4 == 4) {
 					// is it IP version 4? Then enqueue it
 					// for processing
-					IP *ip;
+					Tins::IP *ip;
 					try {
-						ip = new IP((const uint8_t *)buf, received);
+						ip = new Tins::IP((const uint8_t *)buf, received);
 					} catch (Tins::malformed_packet&) {
 						std::cerr << "Warning: malformed packet" << std::endl;
 						continue;
@@ -182,7 +182,7 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 					// Tins::Timestamp is a timeval struct,
 					// so no monotonic clock anyway..
 					auto timestamp = extract_timestamp_from_msg((struct msghdr &)msg);
-					Packet packet = Packet((PDU *)ip, timestamp);
+					Tins::Packet packet = Tins::Packet((Tins::PDU *)ip, timestamp);
 					handler(packet);
 					delete ip;
 				}
@@ -228,7 +228,7 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl);
 				//UDPv4Probe probe(target(), dport, srcport(), ttl);	
 			}
-			IP *packet;
+			Tins::IP *packet;
 			try {
 				packet = &probe->send();
 			} catch (std::runtime_error &e) {
@@ -268,9 +268,9 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 }
 
 
-bool DublinTraceroute::sniffer_callback(Packet &packet) {
+bool DublinTraceroute::sniffer_callback(Tins::Packet &packet) {
 	std::lock_guard<std::mutex> lock(mutex_sniffed_packets);
-	sniffed_packets.push_back(std::make_shared<Packet>(packet));
+	sniffed_packets.push_back(std::make_shared<Tins::Packet>(packet));
 	return true;
 }
 

@@ -26,40 +26,40 @@ TracerouteResults::TracerouteResults(std::shared_ptr<flow_map_t> flows, const ui
 }
 
 
-std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
+std::shared_ptr<Tins::IP> TracerouteResults::match_packet(const Tins::Packet &packet) {
 	// Is this an IP packet?
-	IP ip;
+	Tins::IP ip;
 	try {
-		ip = packet.pdu()->rfind_pdu<IP>();
-	} catch (pdu_not_found) {
+		ip = packet.pdu()->rfind_pdu<Tins::IP>();
+	} catch (Tins::pdu_not_found) {
 		return nullptr;
 	}
 
 	// Does it contain an ICMP response?
-	ICMP icmp;
+	Tins::ICMP icmp;
 	try {
-		icmp = ip.rfind_pdu<ICMP>();
-	} catch (pdu_not_found) {
+		icmp = ip.rfind_pdu<Tins::ICMP>();
+	} catch (Tins::pdu_not_found) {
 		return nullptr;
 	}
 
 	// does the ICMP contain an inner IP packet sent by us?
-	IP inner_ip;
+	Tins::IP inner_ip;
 	try {
-		inner_ip = icmp.rfind_pdu<RawPDU>().to<IP>();
-	} catch (pdu_not_found) {
+		inner_ip = icmp.rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
+	} catch (Tins::pdu_not_found) {
 		return nullptr;
-	} catch (malformed_packet) {
+	} catch (Tins::malformed_packet) {
 		return nullptr;
 	}
 
 	// does the inner packet contain our original UDP packet?
-	UDP inner_udp;
+	Tins::UDP inner_udp;
 	try {
-		inner_udp = inner_ip.rfind_pdu<UDP>();
-	} catch (pdu_not_found) {
+		inner_udp = inner_ip.rfind_pdu<Tins::UDP>();
+	} catch (Tins::pdu_not_found) {
 		return nullptr;
-	} catch (malformed_packet) {
+	} catch (Tins::malformed_packet) {
 		return nullptr;
 	}
 
@@ -80,14 +80,14 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 
 	unsigned int index = 0;
 	for (auto &hop: *hops) {
-		// FIXME catch pdu_not_found
-		auto &sent = hop.sent()->rfind_pdu<IP>();
+		// FIXME catch Tins::pdu_not_found
+		auto &sent = hop.sent()->rfind_pdu<Tins::IP>();
 		if (!broken_nat_) {
 			if (sent.src_addr() != inner_ip.src_addr())
 				continue;
 		}
-		// FIXME catch pdu_not_found
-		auto &udp = hop.sent()->rfind_pdu<UDP>();
+		// FIXME catch Tins::pdu_not_found
+		auto &udp = hop.sent()->rfind_pdu<Tins::UDP>();
 		/*
 		 * The original paris-traceroute would match the checksum, but
 		 * this does not work when there is NAT translation. Using the
@@ -105,7 +105,7 @@ std::shared_ptr<IP> TracerouteResults::match_packet(const Packet &packet) {
 #endif /* USE_IP_ID_MATCHING */
 			try {
 				hop.received(ip, packet.timestamp());
-				return std::make_shared<IP>(ip);
+				return std::make_shared<Tins::IP>(ip);
 			} catch (std::out_of_range) {
 				// this should never happen
 				throw;
@@ -146,9 +146,9 @@ void TracerouteResults::show(std::ostream &stream) {
 				stream << " RTT " << rttss.str();
 
 				// print the ICMP type and code
-				ICMP icmp;
+				Tins::ICMP icmp;
 				try {
-					icmp = hop.received()->rfind_pdu<ICMP>();
+					icmp = hop.received()->rfind_pdu<Tins::ICMP>();
 					stream << " ICMP "
 						<< "(type=" << icmp.type() << ", code=" << static_cast<int>(icmp.code()) << ") '"
 						<< icmpm.get(icmp.type(), icmp.code()) << "'";
@@ -177,7 +177,7 @@ void TracerouteResults::show(std::ostream &stream) {
 							}
 						}
 					}
-				} catch (pdu_not_found) {
+				} catch (Tins::pdu_not_found) {
 				}
 
 				/* NAT detection.
@@ -185,7 +185,7 @@ void TracerouteResults::show(std::ostream &stream) {
 				 * responding, the detected NAT could have been
 				 * started before
 				 */
-				auto inner_ip = hop.received()->rfind_pdu<RawPDU>().to<IP>();
+				auto inner_ip = hop.received()->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
 				stream << ", NAT ID: " << hop.nat_id();
 				if (hopnum > 1 && hop.nat_id() != prev_nat_id)
 					stream << " (NAT detected)";
@@ -223,7 +223,7 @@ void TracerouteResults::compress() {
 	if (compressed_)
 		return;
 	for (auto &iter: flows()) {
-		IPv4Address target = iter.second->at(0).sent()->dst_addr();
+		Tins::IPv4Address target = iter.second->at(0).sent()->dst_addr();
 		for (auto hop = iter.second->rbegin(); hop != iter.second->rend(); hop++) {
 			// TODO also check for ICMP type==3 and code==3
 			if (hop->received()) {

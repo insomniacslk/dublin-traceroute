@@ -23,29 +23,27 @@
 
 #include <json/json.h>
 
-using namespace Tins;
-
 
 class Hop {
 private:
-	std::shared_ptr<IP> sent_;
-	std::shared_ptr<IP> received_;
-	std::shared_ptr<Timestamp> sent_timestamp_;
-	std::shared_ptr<Timestamp> received_timestamp_;
+	std::shared_ptr<Tins::IP> sent_;
+	std::shared_ptr<Tins::IP> received_;
+	std::shared_ptr<Tins::Timestamp> sent_timestamp_;
+	std::shared_ptr<Tins::Timestamp> received_timestamp_;
 	std::string name_ = "";
 	bool last_hop_;
 public:
 	Hop(): last_hop_(false) { }
-	std::shared_ptr<IP> sent() { return sent_; }
-	std::shared_ptr<IP> received() { return received_; }
+	std::shared_ptr<Tins::IP> sent() { return sent_; }
+	std::shared_ptr<Tins::IP> received() { return received_; }
 	std::string name() { return name_; }
 	std::shared_ptr<Tins::Timestamp> received_timestamp() { return received_timestamp_; }
 	std::shared_ptr<Tins::Timestamp> sent_timestamp() { return sent_timestamp_; }
 	std::string resolve();
 	uint16_t nat_id();
 	const bool zerottl_forwarding_bug();
-	void sent(IP &packet);
-	void received(IP &packet, const Tins::Timestamp &timestamp);
+	void sent(Tins::IP &packet);
+	void received(Tins::IP &packet, const Tins::Timestamp &timestamp);
 	void name(std::string &name);
 	void sent_timestamp(const Tins::Timestamp &timestamp);
 	const bool is_last_hop() const { return last_hop_; }

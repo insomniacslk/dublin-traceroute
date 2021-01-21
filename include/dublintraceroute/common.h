@@ -31,10 +31,7 @@
  */
 #define USE_IP_ID_MATCHING
 
-using namespace Tins;
-
 #define PROGNAME	"dublin-traceroute"
-#define LOG_DIR		"logs"
 
 typedef uint16_t flow_id_t;
 typedef std::map<flow_id_t, std::shared_ptr<Hops>> flow_map_t;

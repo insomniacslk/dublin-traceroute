@@ -39,7 +39,7 @@ static void usage() {
 R"(Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
-  dublin-traceroute <target> [--sport=src_base_port]
+   )" PROGNAME R"(<target> [--sport=src_base_port]
                              [--dport=dest_base_port]
                              [--npaths=num_paths]
                              [--min-ttl=min_ttl]
@@ -201,7 +201,7 @@ main(int argc, char **argv) {
 		std::exit(EXIT_FAILURE);
 	}
 
-	std::cerr << "Starting dublin-traceroute (probe type: " << probe_type_name(type) << ")" << std::endl;
+	std::cerr << "Starting " PROGNAME " (probe type: " << probe_type_name(type) << ")" << std::endl;
 
 	DublinTraceroute Dublin(
 			target,
