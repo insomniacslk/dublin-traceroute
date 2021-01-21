@@ -47,10 +47,11 @@ jobs:
           make
           ./dublin-traceroute -v
   build_go:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         go: ['1.14', '1.15']
+        os: ['ubuntu-latest', 'macos-latest']
     steps:
       - uses: actions/checkout@v2
         with:
