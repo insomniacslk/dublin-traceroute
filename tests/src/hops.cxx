@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 #include <dublintraceroute/hops.h>
 #include <gtest/gtest.h>
 #include <tins/tins.h>

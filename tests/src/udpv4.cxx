@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 #include <dublintraceroute/udpv4probe.h>
 #include <gtest/gtest.h>
 #include <tins/tins.h>

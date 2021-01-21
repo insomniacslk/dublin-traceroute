@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 set -eux
 
 if [ $UID -ne 0 ]

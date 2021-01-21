@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#
+# SPDX-License-Identifier: BSD-2-Clause
 
 import json
 import random

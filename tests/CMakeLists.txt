@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
 INCLUDE_DIRECTORIES(${gtest_INCLUDE_DIRS})
 ADD_SUBDIRECTORY(src)
 

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 #include <dublintraceroute/hop.h>
 #include <dublintraceroute/exceptions.h>
 #include <gtest/gtest.h>

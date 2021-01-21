@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /**
  * \file   main.cc
  * \Author Andrea Barberio <insomniac@slackware.it>
