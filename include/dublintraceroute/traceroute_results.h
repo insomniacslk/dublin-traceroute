@@ -36,7 +36,7 @@ public:
 	TracerouteResults(std::shared_ptr<flow_map_t> flows, const uint8_t min_ttl /* = 1 */, const bool broken_nat /* = false */, const bool use_srcport_for_path_generation /* = false */);
 	~TracerouteResults() { };
 	inline flow_map_t &flows() { return *flows_; }
-	std::shared_ptr<IP> match_packet(const Packet &packet);
+	std::shared_ptr<Tins::IP> match_packet(const Tins::Packet &packet);
 	void show(std::ostream &stream=std::cerr);
 	void compress();
 	std::string to_json();

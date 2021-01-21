@@ -14,8 +14,6 @@
 
 #include "dublintraceroute/hop.h"
 
-using namespace Tins;
-
 
 class Hops {
 private:

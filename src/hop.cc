@@ -29,14 +29,14 @@
 
 /** \brief setter the sent packet
  */
-void Hop::sent(IP &packet) {
-	sent_ = std::make_shared<IP>(packet);
+void Hop::sent(Tins::IP &packet) {
+	sent_ = std::make_shared<Tins::IP>(packet);
 }
 
 /** \brief setter for the timestamp of the sent packet
  */
 void Hop::sent_timestamp(const Tins::Timestamp &timestamp) {
-	sent_timestamp_ = std::make_shared<Timestamp>(timestamp);
+	sent_timestamp_ = std::make_shared<Tins::Timestamp>(timestamp);
 }
 
 /** \brief setter for the host name of the responding IP
@@ -69,9 +69,9 @@ std::string Hop::resolve() {
 
 /** \brief setter for the received packet and its timestamp
  */
-void Hop::received(IP &packet, const Tins::Timestamp &timestamp) {
-	received_ = std::make_shared<IP>(packet);
-	received_timestamp_ = std::make_shared<Timestamp>(timestamp);
+void Hop::received(Tins::IP &packet, const Tins::Timestamp &timestamp) {
+	received_ = std::make_shared<Tins::IP>(packet);
+	received_timestamp_ = std::make_shared<Tins::Timestamp>(timestamp);
 }
 
 /** \brief return the NAT ID of the hop
@@ -88,9 +88,9 @@ uint16_t Hop::nat_id() {
 		);
 	}
 	// FIXME catch pdu_not_found
-	uint16_t chk1 = sent_->rfind_pdu<UDP>().checksum();
-	IP inner_ip = received_->rfind_pdu<RawPDU>().to<IP>();
-	uint16_t chk2 = inner_ip.rfind_pdu<UDP>().checksum();
+	uint16_t chk1 = sent_->rfind_pdu<Tins::UDP>().checksum();
+	Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
+	uint16_t chk2 = inner_ip.rfind_pdu<Tins::UDP>().checksum();
 	return chk2 - chk1;
 }
 
@@ -110,8 +110,8 @@ const bool Hop::zerottl_forwarding_bug() {
 		);
 	}
 	// FIXME catch pdu_not_found
-	uint16_t chk1 = sent_->rfind_pdu<UDP>().checksum();
-	IP inner_ip = received_->rfind_pdu<RawPDU>().to<IP>();
+	uint16_t chk1 = sent_->rfind_pdu<Tins::UDP>().checksum();
+	Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
 	if (inner_ip.ttl() == 0) {
 		// TODO handle the interesting case where TTL is neither 0 or 1
 		return true;
@@ -150,19 +150,19 @@ unsigned int Hop::rtt() {
  */
 const uint16_t Hop::flowhash() {
 	uint16_t flowhash = 0;
-	IP ip;
+	Tins::IP ip;
 	try {
-		ip = (*sent()).rfind_pdu<IP>();
-	} catch (pdu_not_found) {
+		ip = (*sent()).rfind_pdu<Tins::IP>();
+	} catch (Tins::pdu_not_found) {
 		return 0;
 	}
 	flowhash += ip.tos() + ip.protocol();
 	flowhash += (uint32_t)(ip.src_addr());
 	flowhash += (uint32_t)(ip.dst_addr());
-	UDP udp;
+	Tins::UDP udp;
 	try {
-		udp = (*sent()).rfind_pdu<UDP>();
-	} catch (pdu_not_found) {
+		udp = (*sent()).rfind_pdu<Tins::UDP>();
+	} catch (Tins::pdu_not_found) {
 		return 0;
 	}
 	flowhash += udp.sport() + udp.dport();
@@ -197,7 +197,7 @@ Json::Value Hop::to_json() {
 
 	// UDP layer
 	try {
-		auto udp = sent()->rfind_pdu<UDP>();
+		auto udp = sent()->rfind_pdu<Tins::UDP>();
 		root["sent"]["udp"]["sport"] = udp.sport();
 		root["sent"]["udp"]["dport"] = udp.dport();
 	} catch (Tins::pdu_not_found) {
@@ -216,7 +216,7 @@ Json::Value Hop::to_json() {
 
 		// ICMP layer
 		try {
-			auto icmp = received()->rfind_pdu<ICMP>();
+			auto icmp = received()->rfind_pdu<Tins::ICMP>();
 			root["received"]["icmp"]["type"] = static_cast<int>(icmp.type());
 			root["received"]["icmp"]["code"] = static_cast<int>(icmp.code());
 			root["received"]["icmp"]["description"] = icmpm.get(icmp.type(), icmp.code());
@@ -283,16 +283,16 @@ std::string Hop::summary() {
 	if (sent() == nullptr) {
 		return std::string("<incomplete hop>");
 	}
-	IP ip;
+	Tins::IP ip;
 	try {
-		ip = sent()->rfind_pdu<IP>();
-	} catch (pdu_not_found) {
+		ip = sent()->rfind_pdu<Tins::IP>();
+	} catch (Tins::pdu_not_found) {
 		return std::string("<incomplete: No IP layer found>");
 	}
-	UDP udp;
+	Tins::UDP udp;
 	try {
-		udp = sent()->rfind_pdu<UDP>();
-	} catch (pdu_not_found) {
+		udp = sent()->rfind_pdu<Tins::UDP>();
+	} catch (Tins::pdu_not_found) {
 		return std::string("<incomplete: No UDP layer found>");
 	}
 	stream

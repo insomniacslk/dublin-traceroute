@@ -23,8 +23,6 @@
 #include "exceptions.h"
 #include "traceroute_results.h"
 
-using namespace Tins;
-
 // TODO add copyright and author
 
 /* TODO put everything into a namespace, e.g.
@@ -63,7 +61,7 @@ private:
 				 dstport_;
 	const std::string	 dst_;
 	const probe_type	 type_;
-	IPv4Address		 target_;
+	Tins::IPv4Address		 target_;
 	const uint8_t		 npaths_,
 				 min_ttl_,
 				 max_ttl_;
@@ -73,8 +71,8 @@ private:
 				 no_dns_;
 	std::mutex		 mutex_tracerouting,
 				 mutex_sniffed_packets;
-	IPv4Address		 my_address;
-	std::vector<std::shared_ptr<Packet>>	 sniffed_packets;
+	Tins::IPv4Address		 my_address;
+	std::vector<std::shared_ptr<Tins::Packet>>	 sniffed_packets;
 	const void		 validate_arguments();
 
 public:
@@ -164,12 +162,12 @@ public:
 	inline const bool broken_nat() const { return broken_nat_; }
 	inline const bool no_dns() const { return no_dns_; }
 	inline const bool use_srcport_for_path_generation() const { return use_srcport_for_path_generation_; }
-	inline const IPv4Address &target() const { return target_; }
-	void target(const IPv4Address &addr) { target_ = addr; }
+	inline const Tins::IPv4Address &target() const { return target_; }
+	void target(const Tins::IPv4Address &addr) { target_ = addr; }
 	std::shared_ptr<TracerouteResults> traceroute();
 
 private:
-	bool sniffer_callback(Packet& packet);
+	bool sniffer_callback(Tins::Packet& packet);
 	void match_sniffed_packets(TracerouteResults &results);
 	void match_hostnames(TracerouteResults &results, std::shared_ptr<flow_map_t> flows);
 };
