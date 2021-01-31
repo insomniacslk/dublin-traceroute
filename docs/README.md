@@ -96,7 +96,7 @@ easy to reuse in your projects.
 The results are encoded in JSON format, so you can easily integrate them in your
 own application.
 
-The core library and CLI are writteh in C++1, using the beautiful network packet library
+The core library and CLI are written in C++1, using the beautiful network packet library
 [libtins](https://libtins.github.io).
 
 If you prefer to use Python, or if you need graphical visualization and data
@@ -140,15 +140,51 @@ Dublin Traceroute aims to be:
 
 * fast
 * easy to use
-* multi-language (currently C++ and Python, plus an experimental Go
+* multi-language (currently C++ and Python, plus a parallel Go
   implementation)
-* multi-platform: any system with a reasonable C++11 compiler will work
+* multi-platform: any system with a reasonable C++11 or Go compiler will work
 * accurate: the reported paths should be as close as possible to the reality
 * visual: it can generate diagrams from the traceroute data
 * robust: no memory leaks, no crashes
 * usable in larger systems
 * business-friendly from the licensing point of view (it is released under the
   [2-clause BSD license](http://opensource.org/licenses/BSD-2-Clause))
+
+## Feature matrix
+
+There are three code bases, one in C++, one in Go, and one in Python. Why so
+many? Originally, `dublin-traceroute` was written in C++11. Then I added Python
+bindings to simplify the generation of the dot file for graphical output, and to
+allow Pandas support for statistical analysis.
+Later on I realized that the C++ implementation was limiting the speed of
+development of `dublin-traceroute`, so I gave it a try with Go. A basic
+implementation took one afternoon, and a few more days to make it 100%
+compatible with the C++ one, and to implement IPv6 probes. This suggested that
+the Go implementation could become the primary one in the future. However Go
+binaries are far larger than C++ ones, which is an issue on memory-constrained
+devices, so the switchover is not going to happen soon.
+
+The matrix below compares the features of each implementation. Remember that the
+Python bindings add features on top of the C++ library.
+
+|     | C++ cli/lib | Python bindings | Go cli |
+| --- | --- | --- | --- |
+| IPv4/UDP probe | yes | yes (using C++ lib) | yes |
+| IPv6/UDP probe | no | no (depends on C++ lib) | yes |
+| IPv4/TCP probe | no | no (depends on C++ lib) | no |
+| IPv6/TCP probe | no | no (depends on C++ lib) | no |
+| IPv4/ICMP probe | no | no (depends on C++ lib) | no |
+| IPv6/ICMP probe | no | no (depends on C++ lib) | no |
+| JSON output | yes | yes (depends on C++ lib) | yes |
+| DOT output | yes | yes (depends on C++ lib) | yes |
+| PNG output | no (done in Python bindings) | yes | no (done in Python bindings) |
+| Statistical analysis | no (done in Python bindings) | yes (using Pandas) | no (done in Python bindings, might switch to go-gota) |
+| Multi-platform | no (Linux-only, macOS breaks at every major release) | yes (where Python runs, and Linux-only if using traceroute functionalities) | yes (Linux, macOS tested, might work on others) |
+| Can be used as a library | yes | yes | no |
+| Linking | dynamic | dynamic | static |
+| Size | ~650kb libdublintraceroute + 700kb libtins (+ optional libpcap) | ~450kb Python lib + 650kb C++ lib | ~4MB static binary |
+| Depends on libpcap | yes if libtins is compiled with libcap support | yes if libtins is compiled with libpcap support | no |
+
 
 ## Installation instructions
 
