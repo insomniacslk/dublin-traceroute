@@ -88,14 +88,16 @@ func (h IPv6) MarshalBinary() ([]byte, error) {
 	if h.NextHeader < 0 || h.NextHeader > 0xff {
 		return nil, errors.New("invalid IPv6 next header")
 	}
-	if h.NextHeader == 0 {
-		switch h.next.(type) {
-		case *UDP:
-			h.NextHeader = ProtoUDP
-		case *ICMPv6:
-			h.NextHeader = ProtoICMPv6
+	/*
+		if h.NextHeader == 0 {
+			switch h.next.(type) {
+			case *UDP:
+				h.NextHeader = ProtoUDP
+			case *ICMPv6:
+				h.NextHeader = ProtoICMPv6
+			}
 		}
-	}
+	*/
 	// hop limit
 	if h.HopLimit < 0 || h.HopLimit > 0xff {
 		return nil, errors.New("invalid IPv6 hop limit")
@@ -152,11 +154,13 @@ func (h *IPv6) UnmarshalBinary(b []byte) error {
 	}
 	payload := b[IPv6HeaderLen : IPv6HeaderLen+h.PayloadLen]
 	if h.NextHeader == ProtoUDP {
-		u, err := NewUDP(payload)
-		if err != nil {
-			return err
-		}
-		h.next = u
+		/*
+			u, err := NewUDP(payload)
+			if err != nil {
+				return err
+			}
+			h.next = u
+		*/
 	} else {
 		h.next = &Raw{Data: payload}
 	}

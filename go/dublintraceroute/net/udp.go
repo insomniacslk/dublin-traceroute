@@ -6,6 +6,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 )
 
 // UDPHeaderLen is the UDP header length
@@ -13,13 +16,14 @@ var UDPHeaderLen = 8
 
 // UDP is the UDP header
 type UDP struct {
-	Src  uint16
-	Dst  uint16
-	Len  uint16
-	Csum uint16
-	next Layer
-	// UDP also needs the previous layer to compute the pseudoheader checksum
-	prev Layer
+	Src     uint16
+	Dst     uint16
+	Len     uint16
+	Csum    uint16
+	Payload []byte
+	// PseudoHeader is used for checksum computation. The caller is responsible
+	// for passing a valid pseudoheader as a byte slice.
+	PseudoHeader []byte
 }
 
 // NewUDP constructs a new UDP header from a sequence of bytes.
@@ -31,22 +35,8 @@ func NewUDP(b []byte) (*UDP, error) {
 	return &h, nil
 }
 
-// Next returns the next layer
-func (h UDP) Next() Layer {
-	return h.next
-}
-
-// SetNext sets the next layer
-func (h *UDP) SetNext(l Layer) {
-	h.next = l
-}
-
-// SetPrev stores the previous layer to be used for checksum computation.
-func (h *UDP) SetPrev(l Layer) {
-	h.prev = l
-}
-
-func checksum(b []byte) uint16 {
+// Checksum computes the UDP checksum. See RFC768 and RFC1071.
+func Checksum(b []byte) uint16 {
 	var sum uint32
 
 	for ; len(b) >= 2; b = b[2:] {
@@ -65,62 +55,75 @@ func checksum(b []byte) uint16 {
 	return csum
 }
 
-type pseudoheader struct {
-	src, dst    [4]byte
-	zero, proto uint8
-	ulen        uint16
+// IPv4HeaderToPseudoHeader returns a byte slice usable as IPv4 pseudoheader
+// for UDP checksum calculation.
+func IPv4HeaderToPseudoHeader(hdr *ipv4.Header, udplen int) ([]byte, error) {
+	if hdr == nil {
+		return nil, errors.New("got nil IPv4 header")
+	}
+	var pseudoheader [12]byte
+	copy(pseudoheader[0:4], hdr.Src.To4())
+	copy(pseudoheader[4:8], hdr.Dst.To4())
+	pseudoheader[8] = 0
+	pseudoheader[9] = byte(hdr.Protocol)
+	binary.BigEndian.PutUint16(pseudoheader[10:12], uint16(udplen))
+
+	return pseudoheader[:], nil
 }
 
-// MarshalBinary serializes the layer
-func (h UDP) MarshalBinary() ([]byte, error) {
+// IPv6HeaderToPseudoHeader returns a byte slice usable as IPv6 pseudoheader
+// for UDP checksum calculation.
+func IPv6HeaderToPseudoHeader(hdr *ipv6.Header) ([]byte, error) {
+	if hdr == nil {
+		return nil, errors.New("got nil IPv4 header")
+	}
+	var pseudoheader [40]byte
+	copy(pseudoheader[0:16], hdr.Src.To16())
+	copy(pseudoheader[16:32], hdr.Dst.To16())
+	binary.BigEndian.PutUint32(pseudoheader[32:36], uint32(hdr.PayloadLen))
+	// three zero-ed bytes
+	pseudoheader[39] = byte(hdr.NextHeader)
+
+	return pseudoheader[:], nil
+}
+
+// MarshalBinary serializes the layer. If the checksum is zero and the IP
+// header is not nil, checksum is computed using the pseudoheader, otherwise
+// it is left to zero.
+func (h *UDP) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, h.Src)
-	binary.Write(&buf, binary.BigEndian, h.Dst)
-	var (
-		payload []byte
-		err     error
-	)
-	if next := h.Next(); next != nil {
-		if payload, err = next.MarshalBinary(); err != nil {
-			return nil, err
-		}
+	if err := binary.Write(&buf, binary.BigEndian, h.Src); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(&buf, binary.BigEndian, h.Dst); err != nil {
+		return nil, err
 	}
 	if h.Len == 0 {
-		h.Len = uint16(UDPHeaderLen + len(payload))
+		h.Len = uint16(UDPHeaderLen + len(h.Payload))
 	}
 	if h.Len < 8 || h.Len > 0xffff-20 {
 		return nil, errors.New("invalid udp header len")
 	}
-	binary.Write(&buf, binary.BigEndian, h.Len)
-	if h.Csum == 0 {
-		prev := h.prev
-		// TODO implement IPv6 too
-		if iph, ok := prev.(*IPv4); ok {
-			var b bytes.Buffer
-			// pseudoheader
-			p := pseudoheader{
-				proto: uint8(iph.Proto),
-				ulen:  h.Len,
-			}
-			if iph.Src != nil {
-				copy(p.src[:], iph.Src.To4())
-			}
-			if iph.Dst != nil {
-				copy(p.dst[:], iph.Dst.To4())
-			}
-			binary.Write(&b, binary.BigEndian, &p)
-			// udp header
-			binary.Write(&b, binary.BigEndian, h.Src)
-			binary.Write(&b, binary.BigEndian, h.Dst)
-			binary.Write(&b, binary.BigEndian, h.Len)
-			// payload
-			binary.Write(&b, binary.BigEndian, payload)
-
-			h.Csum = checksum(b.Bytes())
-		}
+	if err := binary.Write(&buf, binary.BigEndian, h.Len); err != nil {
+		return nil, err
 	}
-	binary.Write(&buf, binary.BigEndian, h.Csum)
-	ret := append(buf.Bytes(), payload...)
+	if h.Csum == 0 && h.PseudoHeader != nil {
+		var b bytes.Buffer
+		if err := binary.Write(&b, binary.BigEndian, h.PseudoHeader); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&b, binary.BigEndian, buf.Bytes()); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&b, binary.BigEndian, h.Payload); err != nil {
+			return nil, err
+		}
+		h.Csum = Checksum(b.Bytes())
+	}
+	if err := binary.Write(&buf, binary.BigEndian, h.Csum); err != nil {
+		return nil, err
+	}
+	ret := append(buf.Bytes(), h.Payload...)
 	return ret, nil
 }
 

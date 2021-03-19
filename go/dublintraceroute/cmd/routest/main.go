@@ -94,7 +94,7 @@ func main() {
 	fn := func(a nfqueue.Attribute) (ret int) {
 		// TODO IPv6
 		verdict := nfqueue.NfDrop
-		reply, err := forgeReplyv4(cfg, *a.Payload)
+		header, payload, err := forgeReplyv4(cfg, *a.Payload)
 		if err != nil {
 			if err == ErrNoMatch {
 				log.Infof("Packet not matching")
@@ -106,7 +106,7 @@ func main() {
 			}
 			goto end
 		}
-		if err := Send4(*flagIfname, reply); err != nil {
+		if err := Send4(*flagIfname, header, payload); err != nil {
 			log.Warningf("send4 failed: %v", err)
 			goto end
 		}

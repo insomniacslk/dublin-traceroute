@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
+	"golang.org/x/net/ipv4"
 )
 
 // ErrNoMatch signals a packet not matching the desired criteria.
@@ -16,63 +17,56 @@ var ErrNoMatch = errors.New("packet not matching")
 // is UDP over IPv4.
 // If the packet doesn't match in the configuration, an ErrNoMatch is
 // returned.
-func forgeReplyv4(cfg *Config, payload []byte) (*inet.IPv4, error) {
-	p, err := inet.NewIPv4(payload)
+// The function returns the IPv4 header and its serialized payload.
+func forgeReplyv4(cfg *Config, payload []byte) (*ipv4.Header, []byte, error) {
+	p, err := ipv4.ParseHeader(payload)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	nextLayer := p.Next()
-	if nextLayer == nil {
-		return nil, errors.New("invalid nil next layer")
+	udp, err := inet.NewUDP(payload[p.Len:])
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse UDP header: %w", err)
 	}
-	pu, ok := nextLayer.(*inet.UDP)
-	if !ok {
-		return nil, fmt.Errorf("invalid next layer, got %T, want *inet.UDP", nextLayer)
-	}
-	log.Debugf("Matching packet: %+v >> %+v", p, p.Next())
+	log.Debugf("Matching packet: %+v >> %+v", p, udp)
 	var match *Probe
 	for _, c := range *cfg {
 		if p.Dst.Equal(c.Dst) &&
 			(c.Src == nil || p.Src.Equal(*c.Src)) &&
 			int(c.TTL) == p.TTL &&
-			c.DstPort == pu.Dst &&
-			(c.SrcPort == nil || *c.SrcPort == pu.Src) {
+			c.DstPort == udp.Dst &&
+			(c.SrcPort == nil || *c.SrcPort == udp.Src) {
 			match = &c
 			break
 		}
 	}
 	if match == nil {
-		return nil, ErrNoMatch
+		return nil, nil, ErrNoMatch
 	}
 	log.Debugf("Found match %+v", *match)
 	dst := p.Src
 	if match.Reply.Dst != nil {
 		dst = *match.Reply.Dst
 	}
-	ip := inet.IPv4{
-		Version:   inet.Version4,
-		HeaderLen: 5,
-		TotalLen:  inet.MinIPv4HeaderLen + inet.UDPHeaderLen + len(payload),
-		TTL:       64, // dummy value, good enough for a reply
-		Proto:     inet.ProtoICMP,
-		Src:       match.Reply.Src,
-		Dst:       dst,
+	ip := ipv4.Header{
+		Version:  4,
+		Len:      ipv4.HeaderLen,
+		TotalLen: ipv4.HeaderLen + inet.UDPHeaderLen + len(payload),
+		TTL:      64, // dummy value, good enough for a reply
+		Protocol: int(inet.ProtoICMP),
+		Src:      match.Reply.Src,
+		Dst:      dst,
+	}
+	if match.Reply.Payload != nil {
+		payload = match.Reply.Payload
 	}
 	icmp := inet.ICMP{
-		Type: inet.ICMPType(match.Reply.IcmpType),
-		Code: inet.ICMPCode(match.Reply.IcmpCode),
+		Type:    inet.ICMPType(match.Reply.IcmpType),
+		Code:    inet.ICMPCode(match.Reply.IcmpCode),
+		Payload: payload,
 	}
-	rawBytes := payload
-	if match.Reply.Payload != nil {
-		rawBytes = match.Reply.Payload
-	} else {
-		rawBytes = payload
-	}
-	raw, err := inet.NewRaw(rawBytes)
+	icmpBytes, err := icmp.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to serialize ICMPv4: %w", err)
 	}
-	ip.SetNext(&icmp)
-	icmp.SetNext(raw)
-	return &ip, nil
+	return &ip, icmpBytes, nil
 }

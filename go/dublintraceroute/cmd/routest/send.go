@@ -6,16 +6,17 @@ import (
 	"net"
 	"syscall"
 
-	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
+	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
 )
 
 // Send4 sends an IPv4 packet to its destination.
-func Send4(ifname string, ip *inet.IPv4) error {
-	data, err := ip.MarshalBinary()
+func Send4(ifname string, ip *ipv4.Header, payload []byte) error {
+	h, err := ip.Marshal()
 	if err != nil {
 		return err
 	}
+	data := append(h, payload...)
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
 		return err
