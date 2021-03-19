@@ -5,13 +5,12 @@ package probev6
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"net"
-	"os"
-	"syscall"
 	"time"
 
-	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv6"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
@@ -84,6 +83,7 @@ func (d UDPv6) packet(hl uint8, src, dst net.IP, srcport, dstport uint16) ([]byt
 	udph := inet.UDP{
 		Src: srcport,
 		Dst: dstport,
+		Len: uint16(inet.UDPHeaderLen + len(payload)),
 	}
 	udpb, err := udph.MarshalBinary()
 	if err != nil {
@@ -136,19 +136,30 @@ func (d UDPv6) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the
 // configured inter-packet delay
 func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
-	// FIXME close fd
-	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
+	localAddr, err := inet.GetLocalAddr("udp6", d.Target)
 	if err != nil {
-		return nil, nil, os.NewSyscallError("socket", err)
+		return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
 	}
-	if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return nil, nil, os.NewSyscallError("setsockopt", err)
+	localUDPAddr, ok := localAddr.(*net.UDPAddr)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
 	}
-	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IP_HDRINCL, 1); err != nil {
-		return nil, nil, os.NewSyscallError("setsockopt", err)
+	// UDPv6 connection, not used to listen but to send probes
+	// TODO this should be unnecessary, but I couldn't find how to avoid it in
+	//      the net/ipv6 API.
+	conn, err := net.ListenPacket("udp6", net.JoinHostPort(localUDPAddr.IP.String(), "0"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create UDPv6 packet listener: %w", err)
 	}
-	var daddrBytes [net.IPv6len]byte
-	copy(daddrBytes[:], d.Target.To16())
+	defer conn.Close()
+	pconn := ipv6.NewPacketConn(conn)
+
+	// Listen for IPv6/ICMP traffic back
+	iconn, err := net.ListenPacket("ip6:ipv6-icmp", localUDPAddr.IP.String())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create ICMPv6 packet listener: %w", err)
+	}
+	defer iconn.Close()
 
 	numPackets := int(d.NumPaths) * int(d.MaxHopLimit-d.MinHopLimit)
 
@@ -157,53 +168,30 @@ func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	recvChan := make(chan []probes.ProbeResponse, 1)
 	go func(errch chan error, rc chan []probes.ProbeResponse) {
 		howLong := d.Delay*time.Duration(numPackets) + d.Timeout
-		received, err := d.ListenFor(howLong)
+		received, err := d.ListenFor(ipv6.NewPacketConn(iconn), howLong)
 		errch <- err
 		// TODO pass the rp chan to ListenFor and let it feed packets there
 		rc <- received
 	}(recvErrors, recvChan)
 
-	// ugly porkaround until I find how to get the local address in a better way
-	conn, err := net.Dial("udp6", net.JoinHostPort(d.Target.String(), "0"))
-	if err != nil {
-		return nil, nil, err
-	}
-	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
-	conn.Close()
+	// send the packets
 	sent := make([]probes.Probe, 0, numPackets)
-	bound := make(map[int]bool)
-	for p := range d.packets(localAddr.IP, d.Target) {
-		if _, ok := bound[p.SrcPort]; !ok {
-			// bind() can be called only once per path listener
-			var saddrBytes [16]byte
-			copy(saddrBytes[:], p.Src.To16())
-			sa := syscall.SockaddrInet6{
-				Addr: saddrBytes,
-				Port: int(p.SrcPort),
-			}
-			if err := syscall.Bind(fd, &sa); err != nil {
-				return nil, nil, os.NewSyscallError("bind", err)
-			}
-			bound[p.SrcPort] = true
+	for p := range d.packets(localUDPAddr.IP, d.Target) {
+		cm := ipv6.ControlMessage{
+			HopLimit: p.HopLimit,
+			Src:      localUDPAddr.IP,
 		}
-		daddr := syscall.SockaddrInet6{
-			Addr: daddrBytes,
-			Port: int(p.DstPort),
+		if _, err := pconn.WriteTo(append(p.UDPHeader, p.Payload...), &cm, &net.UDPAddr{IP: d.Target, Port: p.DstPort}); err != nil {
+			return nil, nil, fmt.Errorf("WriteTo failed: %w", err)
 		}
-		// desired hoplimit
-		if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IPV6, syscall.IPV6_UNICAST_HOPS, p.HopLimit); err != nil {
-			return nil, nil, os.NewSyscallError("setsockopt", err)
-		}
-		if err = syscall.Sendto(fd, p.Payload, 0, &daddr); err != nil {
-			return nil, nil, os.NewSyscallError("sendto", err)
-		}
+		// get timestamp as soon as possible after the packet is sent
+		ts := time.Now()
 		probe := ProbeUDPv6{
-			Data:       append(p.UDPHeader, p.Payload...),
-			LocalAddr:  localAddr.IP,
-			RemoteAddr: d.Target,
+			Payload:    append(p.UDPHeader, p.Payload...),
 			HopLimit:   p.HopLimit,
-			PayloadLen: len(p.UDPHeader) + len(p.Payload),
-			Timestamp:  time.Now(),
+			LocalAddr:  p.Src,
+			RemoteAddr: d.Target,
+			Timestamp:  ts,
 		}
 		if err := probe.Validate(); err != nil {
 			return nil, nil, err
@@ -219,12 +207,7 @@ func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 }
 
 // ListenFor waits for ICMP packets until the timeout expires
-func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) {
-	conn, err := icmp.ListenPacket("ip6:ipv6-icmp", "::")
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
+func (d UDPv6) ListenFor(conn *ipv6.PacketConn, howLong time.Duration) ([]probes.ProbeResponse, error) {
 	packets := make([]probes.ProbeResponse, 0)
 	deadline := time.Now().Add(howLong)
 	for {
@@ -237,7 +220,7 @@ func (d UDPv6) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			data := make([]byte, 4096)
 			now := time.Now()
 			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
-			n, addr, err := conn.ReadFrom(data)
+			n, _, addr, err := conn.ReadFrom(data)
 			receivedAt := time.Now()
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
@@ -266,7 +249,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 	for _, sp := range sent {
 		spu := sp.(*ProbeUDPv6)
 		if err := spu.Validate(); err != nil {
-			log.Printf("Invalid probe: %v", err)
+			log.Printf("Invalid probe: %w", err)
 			continue
 		}
 		sentUDP := spu.UDP()
@@ -330,7 +313,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
 			probe.Name = rpu.Addr.String()
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
-			probe.ZeroTTLForwardingBug = (rpu.InnerIP().HopLimit == 0)
+			probe.ZeroTTLForwardingBug = (rpu.InnerIPv6().HopLimit == 0)
 			probe.Received = &results.Packet{
 				Timestamp: results.UnixUsec(rpu.Timestamp),
 				ICMP: &results.ICMP{

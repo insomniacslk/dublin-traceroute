@@ -2,6 +2,7 @@
 
 package net
 
+/*
 import (
 	"bytes"
 	"encoding/binary"
@@ -137,14 +138,14 @@ func (h IPv4) MarshalBinary() ([]byte, error) {
 	if h.Proto < 0 || h.Proto > 0xff {
 		return nil, errors.New("invalid protocol")
 	}
-	if h.Proto == 0 {
-		switch next.(type) {
-		case *UDP:
-			h.Proto = ProtoUDP
-		case *ICMP:
-			h.Proto = ProtoICMP
+		if h.Proto == 0 {
+			switch next.(type) {
+			case *UDP:
+				h.Proto = ProtoUDP
+			case *ICMP:
+				h.Proto = ProtoICMP
+			}
 		}
-	}
 	binary.Write(&b, binary.BigEndian, uint8(h.Proto))
 
 	// Checksum - left to 0, filled in by the platform
@@ -228,11 +229,11 @@ func (h *IPv4) UnmarshalBinary(b []byte) error {
 	}
 	payload := b[h.HeaderLen*4 : h.TotalLen]
 	if h.Proto == ProtoUDP && !h.IsFragment() {
-		u, err := NewUDP(payload)
-		if err != nil {
-			return err
-		}
-		h.next = u
+			u, err := NewUDP(payload)
+			if err != nil {
+				return err
+			}
+				h.next = u
 	} else if h.Proto == ProtoICMP {
 		i, err := NewICMP(payload)
 		if err != nil {
@@ -245,3 +246,4 @@ func (h *IPv4) UnmarshalBinary(b []byte) error {
 
 	return nil
 }
+*/
