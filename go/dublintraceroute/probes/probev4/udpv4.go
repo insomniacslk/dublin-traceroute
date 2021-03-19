@@ -6,15 +6,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log"
 	"net"
-	"syscall"
 	"time"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/results"
-	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 )
 
 // UDPv4 is a probe type based on IPv4 and UDP
@@ -37,7 +37,7 @@ func computeFlowhash(p *ProbeResponseUDPv4) (uint16, error) {
 		return 0, err
 	}
 	var flowhash uint16
-	flowhash += uint16(p.InnerIP().DiffServ) + uint16(p.InnerIP().Proto)
+	flowhash += uint16(p.InnerIP().TOS) + uint16(p.InnerIP().Protocol)
 	flowhash += binary.BigEndian.Uint16(p.InnerIP().Src.To4()[:2]) + binary.BigEndian.Uint16(p.InnerIP().Src.To4()[2:4])
 	flowhash += binary.BigEndian.Uint16(p.InnerIP().Dst.To4()[:2]) + binary.BigEndian.Uint16(p.InnerIP().Dst.To4()[2:4])
 	flowhash += uint16(p.InnerUDP().Src) + uint16(p.InnerUDP().Dst)
@@ -74,8 +74,8 @@ func (d *UDPv4) Validate() error {
 	return nil
 }
 
-// packet generates a probe packet and returns its bytes.
-func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]byte, error) {
+// packet generates a probe packet and returns its IPv4 header and payload.
+func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) (*ipv4.Header, []byte, error) {
 	// forge the payload. The last two bytes will be adjusted to have a
 	// predictable checksum for NAT detection
 	payload := []byte("NSMNC\x00\x00\x00")
@@ -88,36 +88,42 @@ func (d UDPv4) packet(ttl uint8, src, dst net.IP, srcport, dstport uint16) ([]by
 	payload[6] = byte((id >> 8) & 0xff)
 	payload[7] = byte(id & 0xff)
 
-	udph := inet.UDP{
-		Src: srcport,
-		Dst: dstport,
+	iph := ipv4.Header{
+		Version:  ipv4.Version,
+		Len:      ipv4.HeaderLen,
+		Flags:    ipv4.DontFragment,
+		TTL:      int(ttl),
+		Protocol: int(inet.ProtoUDP),
+		Src:      src,
+		Dst:      dst,
 	}
-	iph := inet.IPv4{
-		Flags: inet.DontFragment,
-		TTL:   int(ttl),
-		Proto: inet.ProtoUDP,
-		Src:   src,
-		Dst:   dst,
-	}
-	iph.SetNext(&udph)
-	udph.SetPrev(&iph)
-	udph.SetNext(&inet.Raw{Data: payload})
-	udpb, err := udph.MarshalBinary()
+	// compute checksum, so we can assign its value to the IP ID. This will
+	// allow tracking packets even if they are rewritten by a NAT.
+	pseudoheader, err := inet.IPv4HeaderToPseudoHeader(&iph, inet.UDPHeaderLen+len(payload))
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to compute IPv4 pseudoheader: %w", err)
 	}
-	// deserialize the stream to get the computed checksum, to use for the IP ID
-	tmp, err := inet.NewUDP(udpb)
+	udp := inet.UDP{
+		Src:          srcport,
+		Dst:          dstport,
+		Len:          uint16(inet.UDPHeaderLen + len(payload)),
+		Payload:      payload,
+		PseudoHeader: pseudoheader,
+	}
+	udpBytes, err := udp.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to marshal UDP header: %w", err)
 	}
-	iph.ID = int(tmp.Csum)
-	return iph.MarshalBinary()
+	iph.ID = int(udp.Csum)
+	iph.TotalLen = ipv4.HeaderLen + len(udpBytes)
+
+	return &iph, udpBytes, nil
 }
 
 type pkt struct {
-	Data []byte
-	Port int
+	Header  *ipv4.Header
+	Payload []byte
+	Port    int
 }
 
 // packets returns a channel of packets that will be sent as probes
@@ -143,13 +149,13 @@ func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 					srcPort = d.SrcPort
 					dstPort = port
 				}
-				packet, err := d.packet(ttl, src, dst, srcPort, dstPort)
+				iph, payload, err := d.packet(ttl, src, dst, srcPort, dstPort)
 				if err != nil {
 					log.Printf("Warning: cannot generate packet for ttl=%d srcport=%d dstport=%d: %v",
 						ttl, srcPort, dstPort, err,
 					)
 				} else {
-					ret <- pkt{Data: packet, Port: int(dstPort)}
+					ret <- pkt{Header: iph, Payload: payload, Port: int(dstPort)}
 				}
 			}
 		}
@@ -161,18 +167,25 @@ func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the configured
 // inter-packet delay
 func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
+	localAddr, err := inet.GetLocalAddr("udp4", d.Target)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
 	}
-	if err = syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-		return nil, nil, err
+	localUDPAddr, ok := localAddr.(*net.UDPAddr)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
 	}
-	if err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_HDRINCL, 1); err != nil {
-		return nil, nil, err
+	// listen for IPv4/ICMP traffic back
+	conn, err := net.ListenPacket("ip4:icmp", localUDPAddr.IP.String())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create ICMPv4 packet listener: %w", err)
 	}
-	var daddrBytes [net.IPv4len]byte
-	copy(daddrBytes[:], d.Target.To4())
+	defer conn.Close()
+	// RawConn is necessary to set the TTL and ID fields
+	rconn, err := ipv4.NewRawConn(conn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create new RawConn: %w", err)
+	}
 
 	numPackets := int(d.NumPaths) * int(d.MaxTTL-d.MinTTL)
 
@@ -181,31 +194,31 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	recvChan := make(chan []probes.ProbeResponse, 1)
 	go func(errch chan error, rc chan []probes.ProbeResponse) {
 		howLong := d.Delay*time.Duration(numPackets) + d.Timeout
-		received, err := d.ListenFor(howLong)
+		received, err := d.ListenFor(rconn, howLong)
 		errch <- err
 		// TODO pass the rp chan to ListenFor and let it feed packets there
 		rc <- received
 	}(recvErrors, recvChan)
 
-	// ugly porkaround until I find how to get the local address in a better way
-	conn, err := net.Dial("udp4", net.JoinHostPort(d.Target.String(), "0"))
-	if err != nil {
-		return nil, nil, err
-	}
-	localAddr := *(conn.LocalAddr()).(*net.UDPAddr)
-	_ = conn.Close()
+	// send the packets
 	sent := make([]probes.Probe, 0, numPackets)
-	for p := range d.packets(localAddr.IP, d.Target) {
-		daddr := syscall.SockaddrInet4{
-			Addr: daddrBytes,
-			Port: p.Port,
+	for p := range d.packets(localUDPAddr.IP, d.Target) {
+		if err := rconn.WriteTo(p.Header, p.Payload, nil); err != nil {
+			return nil, nil, fmt.Errorf("failed to send IPv4 packet: %w", err)
 		}
-		if err = syscall.Sendto(fd, p.Data, 0, &daddr); err != nil {
-			return nil, nil, err
+		// get the current time as soon as possible after sending the packet.
+		// TODO use kernel timestamping (and equivalent on other platforms) for
+		//      more accurate time measurement.
+		ts := time.Now()
+		data, err := p.Header.Marshal()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal IPv4 header: %w", err)
 		}
-		sent = append(sent, &ProbeUDPv4{Data: p.Data, LocalAddr: localAddr.IP, Timestamp: time.Now()})
+		data = append(data, p.Payload...)
+		sent = append(sent, &ProbeUDPv4{Data: data, LocalAddr: localUDPAddr.IP, Timestamp: ts})
 		time.Sleep(d.Delay)
 	}
+
 	if err = <-recvErrors; err != nil {
 		return nil, nil, err
 	}
@@ -214,12 +227,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 }
 
 // ListenFor waits for ICMP packets until the timeout expires
-func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) {
-	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
+func (d UDPv4) ListenFor(rconn *ipv4.RawConn, howLong time.Duration) ([]probes.ProbeResponse, error) {
 	packets := make([]probes.ProbeResponse, 0)
 	deadline := time.Now().Add(howLong)
 	for {
@@ -231,8 +239,8 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 			// TODO tune data size
 			data := make([]byte, 1024)
 			now := time.Now()
-			conn.SetReadDeadline(now.Add(time.Millisecond * 100))
-			n, addr, err := conn.ReadFrom(data)
+			rconn.SetReadDeadline(now.Add(time.Millisecond * 100))
+			hdr, payload, _, err := rconn.ReadFrom(data)
 			receivedAt := time.Now()
 			if err != nil {
 				if nerr, ok := err.(*net.OpError); ok {
@@ -243,8 +251,8 @@ func (d UDPv4) ListenFor(howLong time.Duration) ([]probes.ProbeResponse, error) 
 				}
 			}
 			packets = append(packets, &ProbeResponseUDPv4{
-				Data:      data[:n],
-				Addr:      (*(addr).(*net.IPAddr)).IP,
+				Header:    hdr,
+				Payload:   payload,
 				Timestamp: receivedAt,
 			})
 		}
@@ -262,7 +270,7 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 	for _, sp := range sent {
 		spu := sp.(*ProbeUDPv4)
 		if err := spu.Validate(); err != nil {
-			log.Printf("Invalid probe: %v", err)
+			log.Printf("Skipping invalid probe: %v", err)
 			continue
 		}
 		sentIP := spu.IP()
@@ -317,8 +325,8 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			}
 			// This is our packet, let's fill the probe data up
 			probe.Flowhash = flowhash
-			probe.IsLast = bytes.Equal(rpu.Addr.To4(), d.Target.To4()) || isPortUnreachable
-			probe.Name = rpu.Addr.String() // TODO compute this field
+			probe.IsLast = bytes.Equal(rpu.Header.Src.To4(), d.Target.To4()) || isPortUnreachable
+			probe.Name = rpu.Header.Src.String() // TODO compute this field
 			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
 			probe.NATID = NATID
 			probe.ZeroTTLForwardingBug = (rpu.InnerIP().TTL == 0)
@@ -330,8 +338,9 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 					Description: description,
 				},
 				IP: results.IP{
-					SrcIP: rpu.Addr,
+					SrcIP: rpu.Header.Src,
 					DstIP: spu.LocalAddr,
+					TTL:   uint8(rpu.InnerIP().TTL),
 				},
 				UDP: &results.UDP{
 					SrcPort: uint16(rpu.InnerUDP().Src),

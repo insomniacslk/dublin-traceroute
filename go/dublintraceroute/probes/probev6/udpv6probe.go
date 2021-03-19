@@ -3,31 +3,34 @@
 package probev6
 
 import (
-	"errors"
+	"fmt"
 	"net"
 	"time"
 
 	inet "github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/net"
 	"github.com/insomniacslk/dublin-traceroute/go/dublintraceroute/probes"
+	"golang.org/x/net/ipv6"
 )
 
 // ProbeUDPv6 represents a sent probe packet with its metadata
 type ProbeUDPv6 struct {
-	Data       []byte
-	HopLimit   int
-	PayloadLen int
-	udp        *inet.UDP
+	// Payload of the sent IPv6 packet
+	Payload []byte
+	// HopLimit value when the packet was sent
+	HopLimit int
 	// time the packet is set at
 	Timestamp time.Time
 	// local address of the packet sender
 	LocalAddr, RemoteAddr net.IP
+	// internal fields
+	udp *inet.UDP
 }
 
 // Validate verifies that the probe has the expected structure, and returns an error if not
 func (p *ProbeUDPv6) Validate() error {
 	if p.udp == nil {
 		// decode packet
-		udp, err := inet.NewUDP(p.Data)
+		udp, err := inet.NewUDP(p.Payload)
 		if err != nil {
 			return err
 		}
@@ -43,47 +46,44 @@ func (p ProbeUDPv6) UDP() *inet.UDP {
 
 // ProbeResponseUDPv6 represents a received probe response with its metadata
 type ProbeResponseUDPv6 struct {
-	Data    []byte
-	icmp    *inet.ICMPv6
-	innerIP *inet.IPv6
+	// payload of the received IPv6 packet (expected ICMPv6 -> IPv6 -> UDP)
+	Data []byte
 	// time the packet is received at
 	Timestamp time.Time
 	// sender IP address
 	Addr net.IP
+	// internal fields
+	icmp      *inet.ICMPv6
+	innerIPv6 *ipv6.Header
+	innerUDP  *inet.UDP
+	payload   []byte
 }
 
 // Validate verifies that the probe response has the expected structure, and
 // returns an error if not
 func (pr *ProbeResponseUDPv6) Validate() error {
-	if pr.icmp == nil {
-		// decode packet
-		icmp, err := inet.NewICMPv6(pr.Data)
-		if err != nil {
-			return err
-		}
-		pr.icmp = icmp
+	if pr.icmp != nil && pr.innerIPv6 != nil && pr.innerUDP != nil {
+		return nil
 	}
-	var l inet.Layer
-	if l = pr.icmp.Next(); l == nil {
-		return errors.New("ICMPv6 layer has no payload")
+	// decode ICMPv6 layer
+	icmp, err := inet.NewICMPv6(pr.Data)
+	if err != nil {
+		return fmt.Errorf("failed to decode ICMPv6: %w", err)
 	}
-	raw, ok := l.(*inet.Raw)
-	if !ok {
-		return errors.New("no payload in ICMPv6 layer")
+	pr.icmp = icmp
+	// decode inner IPv6 layer
+	ip, err := ipv6.ParseHeader(pr.Data[inet.ICMPv6HeaderLen:])
+	if err != nil {
+		return fmt.Errorf("failed to decode inner IPv6: %w", err)
 	}
-	var ip inet.IPv6
-	ip.IPinICMP = true
-	if err := ip.UnmarshalBinary(raw.Data); err != nil {
-		return err
+	pr.innerIPv6 = ip
+	// decode inner UDP layer
+	udp, err := inet.NewUDP(pr.Data[inet.ICMPv6HeaderLen+inet.IPv6HeaderLen:])
+	if err != nil {
+		return fmt.Errorf("failed to decode inner UDP: %w", err)
 	}
-	pr.innerIP = &ip
-	l = pr.innerIP.Next()
-	if l == nil {
-		return errors.New("inner IPv6 layer has no payload")
-	}
-	if _, ok := l.(*inet.UDP); !ok {
-		return errors.New("inner IPv6 layer has no UDP layer")
-	}
+	pr.innerUDP = udp
+	pr.payload = pr.Data[inet.ICMPv6HeaderLen+inet.IPv6HeaderLen+inet.UDPHeaderLen:]
 	return nil
 }
 
@@ -91,8 +91,8 @@ func (pr *ProbeResponseUDPv6) Validate() error {
 // probes must have been already validated with Validate, this function may
 // panic otherwise.
 func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
-	p := pi.(*ProbeUDPv6)
-	if p == nil {
+	p, ok := pi.(*ProbeUDPv6)
+	if !ok || p == nil {
 		return false
 	}
 	icmp := pr.ICMPv6()
@@ -102,7 +102,7 @@ func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
 		return false
 	}
 	// TODO check that To16() is the right thing to call here
-	if !pr.InnerIP().Dst.To16().Equal(p.RemoteAddr.To16()) {
+	if !pr.InnerIPv6().Dst.To16().Equal(p.RemoteAddr.To16()) {
 		// this is not a response to any of our probes, discard it
 		return false
 	}
@@ -111,34 +111,29 @@ func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
 		// this is not our packet
 		return false
 	}
-	if pr.InnerIP().PayloadLen != p.PayloadLen {
-		// different length, not our packet
+	if len(pr.payload) != len(p.Payload) {
+		// different payload length, not our packet
 		return false
 	}
 	return true
 }
 
-// ICMPv6 returns the ICMPv6 layer of the probe, expecting it to be the
-// first encountered layer
+// ICMPv6 returns the ICMPv6 layer of the probe.
 func (pr *ProbeResponseUDPv6) ICMPv6() *inet.ICMPv6 {
 	return pr.icmp
 }
 
-// InnerIP returns the IP layer of the inner packet of the probe,
-// expecting it to be the first encountered layer in the inner packet
-func (pr *ProbeResponseUDPv6) InnerIP() *inet.IPv6 {
-	return pr.innerIP
+// InnerIPv6 returns the IP layer of the inner packet of the probe.
+func (pr *ProbeResponseUDPv6) InnerIPv6() *ipv6.Header {
+	return pr.innerIPv6
 }
 
-// InnerUDP returns the UDP layer of the inner packet of the probe,
-// expecting it to be the second encountered layer in the inner packet
+// InnerUDP returns the UDP layer of the inner packet of the probe.
 func (pr *ProbeResponseUDPv6) InnerUDP() *inet.UDP {
-	if pr.innerIP == nil {
-		return nil
-	}
-	u, ok := pr.innerIP.Next().(*inet.UDP)
-	if !ok {
-		return nil
-	}
-	return u
+	return pr.innerUDP
+}
+
+// InnerPayload returns the payload of the inner UDP packet
+func (pr *ProbeResponseUDPv6) InnerPayload() []byte {
+	return pr.payload
 }

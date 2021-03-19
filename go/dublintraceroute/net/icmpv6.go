@@ -114,7 +114,7 @@ func (i ICMPv6) MarshalBinary() ([]byte, error) {
 	binary.Write(&bc, binary.BigEndian, i.Type)
 	binary.Write(&bc, binary.BigEndian, i.Code)
 	binary.Write(&bc, binary.BigEndian, payload)
-	i.Checksum = checksum(bc.Bytes())
+	i.Checksum = Checksum(bc.Bytes())
 	binary.Write(&b, binary.BigEndian, i.Checksum)
 	binary.Write(&b, binary.BigEndian, i.Unused)
 	return b.Bytes(), nil
