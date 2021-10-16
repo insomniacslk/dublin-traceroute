@@ -173,13 +173,13 @@ func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	var localAddr net.IP
 	if d.Source == "0.0.0.0" {
-	  addr, err := inet.GetLocalAddr("udp4", d.Target)
-	  if err != nil {
-		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
-	  }
+		addr, err := inet.GetLocalAddr("udp4", d.Target)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+		}
 		localAddr = addr.(*net.UDPAddr).IP
 	} else {
-		localAddr = net.ParseIP( d.Source )
+		localAddr = net.ParseIP(d.Source)
 	}
 	//localUDPAddr, ok := localAddr.(*net.UDPAddr)
 	//if !ok {

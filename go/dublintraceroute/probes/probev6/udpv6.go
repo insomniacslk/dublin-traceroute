@@ -38,7 +38,7 @@ func (d *UDPv6) Validate() error {
 	if d.Target.To16() == nil {
 		return errors.New("Invalid IPv6 target address")
 	}
-	if d.Source!="0.0.0.0" && net.ParseIP(d.Source).To16() == nil {
+	if d.Source != "0.0.0.0" && net.ParseIP(d.Source).To16() == nil {
 		return errors.New("Invalid IPv6 source address")
 	}
 	if d.UseSrcPort {
@@ -142,13 +142,13 @@ func (d UDPv6) packets(src, dst net.IP) <-chan pkt {
 func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	var localAddr net.IP
 	if d.Source == "0.0.0.0" {
-	  addr, err := inet.GetLocalAddr("udp6", d.Target)
-	  if err != nil {
-		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp6': %w", d.Target, err)
-	  }
+		addr, err := inet.GetLocalAddr("udp6", d.Target)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp6': %w", d.Target, err)
+		}
 		localAddr = addr.(*net.UDPAddr).IP
 	} else {
-		localAddr = net.ParseIP( d.Source )
+		localAddr = net.ParseIP(d.Source)
 	}
 	//localUDPAddr, ok := localAddr.(*net.UDPAddr)
 	//if !ok {
