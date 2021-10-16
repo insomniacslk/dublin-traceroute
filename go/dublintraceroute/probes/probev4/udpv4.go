@@ -179,7 +179,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	  }
 	  localAddr = addr.(*net.UDPAddr).IP
 	} else {
-		localAddr = net.ParseIP( d.Source )
+	  localAddr = net.ParseIP(d.Source)
 	}
 	//localUDPAddr, ok := localAddr.(*net.UDPAddr)
 	//if !ok {
