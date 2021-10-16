@@ -46,7 +46,7 @@ set_target_properties(dublintraceroute
 
 find_package(PkgConfig)
 find_package(Threads REQUIRED)
-find_package(libtins 3.4)
+find_package(libtins 4.2)
 if (${libtins_FOUND})
     MESSAGE(STATUS "libtins found via CMake")
 else (${libtins_FOUND})
