@@ -171,20 +171,21 @@ func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the configured
 // inter-packet delay
 func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
+	var localAddr net.IP
 	if d.Source == "0.0.0.0" {
-	  localAddr, err := inet.GetLocalAddr("udp4", d.Target)
+	  localAddr, err = inet.GetLocalAddr("udp4", d.Target)
 	  if err != nil {
 		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
 	  }
 	} else {
-		localAddr := net.ParseIP( d.Source )
+		localAddr = net.ParseIP( d.Source )
 	}
-	localUDPAddr, ok := localAddr.(*net.UDPAddr)
-	if !ok {
-		return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
-	}
+	//localUDPAddr, ok := localAddr.(*net.UDPAddr)
+	//if !ok {
+	//	return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
+	//}
 	// listen for IPv4/ICMP traffic back
-	conn, err := net.ListenPacket("ip4:icmp", localUDPAddr.IP.String())
+	conn, err := net.ListenPacket("ip4:icmp", localAddr.String())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create ICMPv4 packet listener: %w", err)
 	}
@@ -210,7 +211,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 
 	// send the packets
 	sent := make([]probes.Probe, 0, numPackets)
-	for p := range d.packets(localUDPAddr.IP, d.Target) {
+	for p := range d.packets(localAddr, d.Target) {
 		if err := rconn.WriteTo(p.Header, p.Payload, nil); err != nil {
 			return nil, nil, fmt.Errorf("failed to send IPv4 packet: %w", err)
 		}
@@ -223,7 +224,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 			return nil, nil, fmt.Errorf("failed to marshal IPv4 header: %w", err)
 		}
 		data = append(data, p.Payload...)
-		sent = append(sent, &ProbeUDPv4{Data: data, LocalAddr: localUDPAddr.IP, Timestamp: ts})
+		sent = append(sent, &ProbeUDPv4{Data: data, LocalAddr: localAddr, Timestamp: ts})
 		time.Sleep(d.Delay)
 	}
 
