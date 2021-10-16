@@ -52,7 +52,7 @@ Usage:
                              [--use-srcport]
                              [--no-dns]
                              [--output-file=file_name]
-														 [--src-address=ip]
+                             [--src-address=ip]
                              [--help]
                              [--version]
 
@@ -69,7 +69,7 @@ Options:
   -i --use-srcport              generate paths using source port instead of destination port
   -N --no-dns                   do not attempt to do reverse DNS lookup of the hops
   -o --output-file              the output file name (default: stdout)
-	-a --src-address              the source IP address to use, default auto determined
+  -a --src-address              the source IP address to use, default auto determined
 
 
 See documentation at https://dublin-traceroute.net
