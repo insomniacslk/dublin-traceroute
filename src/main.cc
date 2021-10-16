@@ -18,7 +18,7 @@
 
 #include <dublintraceroute/dublin_traceroute.h>
 
-const char *shortopts = "hvs:d:n:t:T:D:biNo:";
+const char *shortopts = "hvs:d:n:t:T:D:biNo:a:";
 const struct option longopts[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'v'},
@@ -32,6 +32,7 @@ const struct option longopts[] = {
 	{"use-srcport", no_argument, NULL, 'i'},
 	{"no-dns", no_argument, NULL, 'N'},
 	{"output-file", required_argument, NULL, 'o'},
+	{"src-address", no_argument, NULL, 'a'},
 	{NULL, 0, NULL, 0},
 };
 
@@ -51,6 +52,7 @@ Usage:
                              [--use-srcport]
                              [--no-dns]
                              [--output-file=file_name]
+														 [--src-address=ip]
                              [--help]
                              [--version]
 
@@ -67,6 +69,7 @@ Options:
   -i --use-srcport              generate paths using source port instead of destination port
   -N --no-dns                   do not attempt to do reverse DNS lookup of the hops
   -o --output-file              the output file name (default: stdout)
+	-a --src-address              the source IP address to use, default auto determined
 
 
 See documentation at https://dublin-traceroute.net
@@ -90,6 +93,7 @@ main(int argc, char **argv) {
 	bool	use_srcport_for_path_generation = DublinTraceroute::default_use_srcport_for_path_generation;
 	bool	no_dns = DublinTraceroute::default_no_dns;
 	std::string	output_file = "";
+  std::string	local_ip = "0.0.0.0";
 
 	if (geteuid() == 0) {
 		std::cerr
@@ -146,6 +150,9 @@ main(int argc, char **argv) {
 			case 'o':
 				output_file.assign(optarg);
 				break;
+			case 'a':
+			  local_ip.assign(optarg);
+				break;
 			default:
 				std::cerr << "Invalid argument: " << iarg << ". See --help" << std::endl;
 				std::exit(EXIT_FAILURE);
@@ -166,7 +173,7 @@ main(int argc, char **argv) {
 		std::cerr << "Source port must be between 1 and 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
-	
+
 	if (dport < 1 || dport > 65535) {
 		std::cerr << "Destination port must be between 1 and 65535" << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -207,6 +214,7 @@ main(int argc, char **argv) {
 
 	DublinTraceroute Dublin(
 			target,
+			local_ip,
 			type,
 			sport,
 			dport,
@@ -218,17 +226,17 @@ main(int argc, char **argv) {
 			use_srcport_for_path_generation,
 			no_dns
 	);
-	
-	std::cerr << "Traceroute from 0.0.0.0:" << Dublin.srcport();
+
+	std::cerr << "Traceroute from " << Dublin.src() << ":" << Dublin.srcport();
 	if(use_srcport_for_path_generation == 1){
 		std::cerr << "~" << (Dublin.srcport() + npaths - 1);
 	}
-	
+
 	std::cerr << " to " << Dublin.dst() << ":" << Dublin.dstport();
 	if(use_srcport_for_path_generation == 0){
 		std::cerr << "~" << (Dublin.dstport() + npaths - 1);
 	}
-	
+
 	std::cerr << " (probing " << npaths << " path" << (npaths == 1 ? "" : "s")
 		<< ", min TTL is " << min_ttl
 		<< ", max TTL is " << max_ttl
@@ -267,4 +275,3 @@ main(int argc, char **argv) {
 
 	std::exit(EXIT_SUCCESS);
 }
-

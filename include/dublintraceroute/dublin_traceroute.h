@@ -61,7 +61,7 @@ class  DublinTraceroute {
 private:
 	const uint16_t		 srcport_,
 				 dstport_;
-	const std::string	 dst_;
+	const std::string	 dst_, src_;
 	const probe_type	 type_;
 	Tins::IPv4Address		 target_;
 	const uint8_t		 npaths_,
@@ -90,6 +90,7 @@ public:
 	static const bool	 default_no_dns = false;
 	DublinTraceroute(
 			const std::string &dst,
+			const std::string &src,
 			const probe_type type = default_type,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
@@ -102,6 +103,7 @@ public:
 			const bool no_dns = default_no_dns
 			):
 				dst_(dst),
+				src_(src),
 				type_(type),
 				srcport_(srcport),
 				dstport_(dstport),
@@ -115,6 +117,7 @@ public:
 	{ validate_arguments(); }
 	DublinTraceroute(
 			const char *dst,
+			const char *src,
 			const probe_type type = default_type,
 			const uint16_t srcport = default_srcport,
 			const uint16_t dstport = default_dstport,
@@ -127,6 +130,7 @@ public:
 			const bool no_dns = default_no_dns
 		       ):
 				dst_(std::string(dst)),
+				src_(std::string(src)),
 				type_(type),
 				srcport_(srcport),
 				dstport_(dstport),
@@ -141,6 +145,7 @@ public:
 	~DublinTraceroute() { std::lock_guard<std::mutex> lock(mutex_tracerouting); };
 	DublinTraceroute(const DublinTraceroute& source):
 		dst_(source.dst_),
+		src_(source.src_),
 		type_(source.type_),
 		srcport_(source.srcport_),
 		dstport_(source.dstport_),
@@ -154,6 +159,7 @@ public:
 	{ validate_arguments(); }
 
 	inline const std::string &dst() const { return dst_; }
+	inline const std::string &src() const { return src_; }
 	inline const probe_type type() const { return static_cast<probe_type>(type_); }
 	inline const uint16_t srcport() const { return srcport_; }
 	inline const uint16_t dstport() const { return dstport_; }
@@ -175,4 +181,3 @@ private:
 };
 
 #endif /* _Dublin_TRACEROUTE_H */
-
