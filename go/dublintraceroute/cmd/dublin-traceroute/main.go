@@ -173,7 +173,7 @@ func main() {
 	} else {
 		dt = &probev6.UDPv6{
 			Target:      target,
-			Source:     Args.source,
+			Source:      Args.source,
 			SrcPort:     uint16(Args.sport),
 			DstPort:     uint16(Args.dport),
 			UseSrcPort:  Args.useSrcport,
