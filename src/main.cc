@@ -42,19 +42,19 @@ static void usage() {
 R"(Written by Andrea Barberio - https://insomniac.slackware.it
 
 Usage:
-   )" PROGNAME R"(<target> [--sport=src_base_port]
-                             [--dport=dest_base_port]
-                             [--npaths=num_paths]
-                             [--min-ttl=min_ttl]
-                             [--max-ttl=max_ttl]
-                             [--delay=delay_in_ms]
-                             [--broken-nat]
-                             [--use-srcport]
-                             [--no-dns]
-                             [--output-file=file_name]
-                             [--src-address=ip]
-                             [--help]
-                             [--version]
+   )" PROGNAME R"( <target> [--sport=src_base_port]
+                              [--dport=dest_base_port]
+                              [--npaths=num_paths]
+                              [--min-ttl=min_ttl]
+                              [--max-ttl=max_ttl]
+                              [--delay=delay_in_ms]
+                              [--broken-nat]
+                              [--use-srcport]
+                              [--no-dns]
+                              [--output-file=file_name]
+                              [--src-address=ip]
+                              [--help]
+                              [--version]
 
 Options:
   -h --help                     this help

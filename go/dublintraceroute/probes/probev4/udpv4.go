@@ -20,6 +20,7 @@ import (
 // UDPv4 is a probe type based on IPv4 and UDP
 type UDPv4 struct {
 	Target     net.IP
+	Source     net.IP
 	SrcPort    uint16
 	DstPort    uint16
 	UseSrcPort bool
@@ -49,6 +50,9 @@ func computeFlowhash(p *ProbeResponseUDPv4) (uint16, error) {
 func (d *UDPv4) Validate() error {
 	if d.Target.To4() == nil {
 		return errors.New("Invalid IPv4 address")
+	}
+	if d.Source.To4() == nil {
+		return errors.New("Invalid IPv4 source address")
 	}
 	if d.NumPaths == 0 {
 		return errors.New("Number of paths must be a positive integer")
@@ -167,9 +171,12 @@ func (d UDPv4) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the configured
 // inter-packet delay
 func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
-	localAddr, err := inet.GetLocalAddr("udp4", d.Target)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+	localAddr := d.Source
+	if localAddr == net.IPv4zero {
+	  localAddr, err := inet.GetLocalAddr("udp4", d.Target)
+	  if err != nil {
+		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+	  }
 	}
 	localUDPAddr, ok := localAddr.(*net.UDPAddr)
 	if !ok {
