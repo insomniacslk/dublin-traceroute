@@ -177,7 +177,7 @@ func (d UDPv4) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	  if err != nil {
 		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
 	  }
-		localAddr = addr.(*net.UDPAddr).IP
+	  localAddr = addr.(*net.UDPAddr).IP
 	} else {
 		localAddr = net.ParseIP( d.Source )
 	}
