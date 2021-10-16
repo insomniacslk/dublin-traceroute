@@ -20,6 +20,7 @@ import (
 // UDPv6 is a probe type based on IPv6 and UDP
 type UDPv6 struct {
 	Target      net.IP
+	Source      net.IP
 	SrcPort     uint16
 	DstPort     uint16
 	UseSrcPort  bool
@@ -35,7 +36,10 @@ type UDPv6 struct {
 // subsequently run the Traceroute() method
 func (d *UDPv6) Validate() error {
 	if d.Target.To16() == nil {
-		return errors.New("Invalid IPv6 address")
+		return errors.New("Invalid IPv6 target address")
+	}
+	if d.Source!=net.IPv4zero && d.Source.To16() == nil {
+		return errors.New("Invalid IPv6 source address")
 	}
 	if d.UseSrcPort {
 		if d.SrcPort+d.NumPaths > 0xffff {
@@ -136,9 +140,12 @@ func (d UDPv6) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the
 // configured inter-packet delay
 func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
-	localAddr, err := inet.GetLocalAddr("udp6", d.Target)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+	localAddr := d.Source
+	if localAddr == net.IPv4zero {
+	  localAddr, err := inet.GetLocalAddr("udp6", d.Target)
+	  if err != nil {
+		  return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+	  }
 	}
 	localUDPAddr, ok := localAddr.(*net.UDPAddr)
 	if !ok {
