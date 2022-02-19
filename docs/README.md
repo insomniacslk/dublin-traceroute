@@ -3,7 +3,7 @@
 ### News - Blog
 
 Dublin Traceroute now has a blog! Check it out at
-https://blog.dublin-traceroute.net .
+[blog.dublin-traceroute.net](https://blog.dublin-traceroute.net).
 
 ### What is it?
 

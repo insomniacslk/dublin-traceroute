@@ -12,7 +12,7 @@ Dublin Traceroute is a NAT-aware multipath traceroute tool.
 
 And this page is just informational. **Read more at https://dublin-traceroute.net** .
 
-Dublin Traceroute has a blog, with articles on how to make the best out of it. Check it out at https://blog.dublin-traceroute.net .
+Dublin Traceroute has a blog, with articles on how to make the best out of it. Check it out at [blog.dublin-traceroute.net](https://blog.dublin-traceroute.net).
 
 Dublin Traceroute has also Python bindings, that will let you:
 * use Dublin Traceroute from Python code
