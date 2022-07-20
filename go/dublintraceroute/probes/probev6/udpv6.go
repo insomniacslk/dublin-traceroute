@@ -20,6 +20,7 @@ import (
 // UDPv6 is a probe type based on IPv6 and UDP
 type UDPv6 struct {
 	Target      net.IP
+	Source      string
 	SrcPort     uint16
 	DstPort     uint16
 	UseSrcPort  bool
@@ -35,7 +36,10 @@ type UDPv6 struct {
 // subsequently run the Traceroute() method
 func (d *UDPv6) Validate() error {
 	if d.Target.To16() == nil {
-		return errors.New("Invalid IPv6 address")
+		return errors.New("Invalid IPv6 target address")
+	}
+	if d.Source != "0.0.0.0" && net.ParseIP(d.Source).To16() == nil {
+		return errors.New("Invalid IPv6 source address")
 	}
 	if d.UseSrcPort {
 		if d.SrcPort+d.NumPaths > 0xffff {
@@ -136,18 +140,24 @@ func (d UDPv6) packets(src, dst net.IP) <-chan pkt {
 // SendReceive sends all the packets to the target address, respecting the
 // configured inter-packet delay
 func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
-	localAddr, err := inet.GetLocalAddr("udp6", d.Target)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp4': %w", d.Target, err)
+	var localAddr net.IP
+	if d.Source == "0.0.0.0" {
+		addr, err := inet.GetLocalAddr("udp6", d.Target)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get local address for target %s with network type 'udp6': %w", d.Target, err)
+		}
+		localAddr = addr.(*net.UDPAddr).IP
+	} else {
+		localAddr = net.ParseIP(d.Source)
 	}
-	localUDPAddr, ok := localAddr.(*net.UDPAddr)
-	if !ok {
-		return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
-	}
+	//localUDPAddr, ok := localAddr.(*net.UDPAddr)
+	//if !ok {
+	//	return nil, nil, fmt.Errorf("invalid address type for %s: want %T, got %T", localAddr, localUDPAddr, localAddr)
+	//}
 	// UDPv6 connection, not used to listen but to send probes
 	// TODO this should be unnecessary, but I couldn't find how to avoid it in
 	//      the net/ipv6 API.
-	conn, err := net.ListenPacket("udp6", net.JoinHostPort(localUDPAddr.IP.String(), "0"))
+	conn, err := net.ListenPacket("udp6", net.JoinHostPort(localAddr.String(), "0"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create UDPv6 packet listener: %w", err)
 	}
@@ -155,7 +165,7 @@ func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 	pconn := ipv6.NewPacketConn(conn)
 
 	// Listen for IPv6/ICMP traffic back
-	iconn, err := net.ListenPacket("ip6:ipv6-icmp", localUDPAddr.IP.String())
+	iconn, err := net.ListenPacket("ip6:ipv6-icmp", localAddr.String())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create ICMPv6 packet listener: %w", err)
 	}
@@ -176,10 +186,10 @@ func (d UDPv6) SendReceive() ([]probes.Probe, []probes.ProbeResponse, error) {
 
 	// send the packets
 	sent := make([]probes.Probe, 0, numPackets)
-	for p := range d.packets(localUDPAddr.IP, d.Target) {
+	for p := range d.packets(localAddr, d.Target) {
 		cm := ipv6.ControlMessage{
 			HopLimit: p.HopLimit,
-			Src:      localUDPAddr.IP,
+			Src:      localAddr,
 		}
 		if _, err := pconn.WriteTo(append(p.UDPHeader, p.Payload...), &cm, &net.UDPAddr{IP: d.Target, Port: p.DstPort}); err != nil {
 			return nil, nil, fmt.Errorf("WriteTo failed: %w", err)

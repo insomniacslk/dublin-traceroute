@@ -39,6 +39,7 @@ const (
 type args struct {
 	version    bool
 	target     string
+	source     string
 	sport      int
 	useSrcport bool
 	dport      int
@@ -114,6 +115,7 @@ func init() {
 	flag.BoolVarP(&Args.brokenNAT, "broken-nat", "b", false, "the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected")
 	flag.BoolVarP(&Args.useSrcport, "use-srcport", "i", false, "generate paths using source port instead of destination port")
 	flag.StringVarP(&Args.outputFile, "output-file", "o", DefaultOutputFile, "the output file name")
+	flag.StringVarP(&Args.source, "src-address", "a", "0.0.0.0", "src IP to use")
 	flag.BoolVarP(&Args.v4, "force-ipv4", "4", false, "Force the use of the legacy IPv4 protocol")
 	flag.CommandLine.SortFlags = false
 }
@@ -142,6 +144,7 @@ func main() {
 	}
 	fmt.Fprintf(os.Stderr, "Traceroute configuration:\n")
 	fmt.Fprintf(os.Stderr, "Target                : %v\n", target)
+	fmt.Fprintf(os.Stderr, "Source                : %v\n", Args.source)
 	fmt.Fprintf(os.Stderr, "Base source port      : %v\n", Args.sport)
 	fmt.Fprintf(os.Stderr, "Base destination port : %v\n", Args.dport)
 	fmt.Fprintf(os.Stderr, "Use srcport for paths : %v\n", Args.useSrcport)
@@ -156,6 +159,7 @@ func main() {
 	if Args.v4 {
 		dt = &probev4.UDPv4{
 			Target:     target,
+			Source:     Args.source,
 			SrcPort:    uint16(Args.sport),
 			DstPort:    uint16(Args.dport),
 			UseSrcPort: Args.useSrcport,
@@ -169,6 +173,7 @@ func main() {
 	} else {
 		dt = &probev6.UDPv6{
 			Target:      target,
+			Source:      Args.source,
 			SrcPort:     uint16(Args.sport),
 			DstPort:     uint16(Args.dport),
 			UseSrcPort:  Args.useSrcport,
