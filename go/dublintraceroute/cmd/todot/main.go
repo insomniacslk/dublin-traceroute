@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
+	"io"
 	"log"
 	"os"
 
@@ -31,11 +32,16 @@ func main() {
 
 	flag.Parse()
 
-	if len(flag.Args()) != 1 {
-		log.Fatal("Missing JSON file name")
+	var (
+		buf []byte
+		err error
+	)
+	if len(flag.Args()) == 0 || flag.Arg(0) == "-" {
+		fmt.Fprintf(os.Stderr, "Reading from stdin...\n")
+		buf, err = io.ReadAll(os.Stdin)
+	} else {
+		buf, err = os.ReadFile(flag.Arg(0))
 	}
-
-	buf, err := os.ReadFile(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("Failed to read file '%s': %v", flag.Arg(0), err)
 	}
