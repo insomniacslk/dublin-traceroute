@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -188,7 +187,7 @@ func main() {
 	if Args.outputFile == "-" {
 		fmt.Println(output)
 	} else {
-		err := ioutil.WriteFile(Args.outputFile, []byte(output), 0644)
+		err := os.WriteFile(Args.outputFile, []byte(output), 0644)
 		if err != nil {
 			log.Fatalf("WriteFile failed: %v", err)
 		}
