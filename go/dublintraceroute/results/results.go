@@ -155,7 +155,7 @@ func (r *Results) compress() {
 }
 
 // ToJSON encodes a Results object to a JSON string.
-func (r *Results) ToJSON(compress bool, indent string) string {
+func (r *Results) ToJSON(compress bool, indent string) (string, error) {
 	if compress {
 		if !r.compressed {
 			r.compress()
@@ -163,9 +163,9 @@ func (r *Results) ToJSON(compress bool, indent string) string {
 	}
 	b, err := json.MarshalIndent(r, "", indent)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("failed to marshal JSON: %w", err)
 	}
-	return string(b)
+	return string(b), nil
 }
 
 // ToDOT encodes a Results object to a DOT file suitable for GraphViz

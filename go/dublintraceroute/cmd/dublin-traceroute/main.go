@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -20,34 +21,35 @@ import (
 
 // Program constants and default values
 const (
-	ProgramName        = "Dublin Traceroute"
-	ProgramVersion     = "v0.1"
-	ProgramAuthorName  = "Andrea Barberio"
-	ProgramAuthorInfo  = "https://insomniac.slackware.it"
-	DefaultSourcePort  = 12345
-	DefaultDestPort    = 33434
-	DefaultNumPaths    = 10
-	DefaultMinTTL      = 1
-	DefaultMaxTTL      = 30
-	DefaultDelay       = 50 //msec
-	DefaultReadTimeout = 3 * time.Second
-	DefaultOutputFile  = "trace.json"
+	ProgramName         = "Dublin Traceroute"
+	ProgramVersion      = "v0.2"
+	ProgramAuthorName   = "Andrea Barberio"
+	ProgramAuthorInfo   = "https://insomniac.slackware.it"
+	DefaultSourcePort   = 12345
+	DefaultDestPort     = 33434
+	DefaultNumPaths     = 10
+	DefaultMinTTL       = 1
+	DefaultMaxTTL       = 30
+	DefaultDelay        = 50 //msec
+	DefaultReadTimeout  = 3 * time.Second
+	DefaultOutputFormat = "json"
 )
 
 // used to hold flags
 type args struct {
-	version    bool
-	target     string
-	sport      int
-	useSrcport bool
-	dport      int
-	npaths     int
-	minTTL     int
-	maxTTL     int
-	delay      int
-	brokenNAT  bool
-	outputFile string
-	v4         bool
+	version      bool
+	target       string
+	sport        int
+	useSrcport   bool
+	dport        int
+	npaths       int
+	minTTL       int
+	maxTTL       int
+	delay        int
+	brokenNAT    bool
+	outputFile   string
+	outputFormat string
+	v4           bool
 }
 
 // Args will hold the program arguments
@@ -112,7 +114,8 @@ func init() {
 	flag.IntVarP(&Args.delay, "delay", "D", DefaultDelay, "the inter-packet delay in milliseconds")
 	flag.BoolVarP(&Args.brokenNAT, "broken-nat", "b", false, "the network has a broken NAT configuration (e.g. no payload fixup). Try this if you see fewer hops than expected")
 	flag.BoolVarP(&Args.useSrcport, "use-srcport", "i", false, "generate paths using source port instead of destination port")
-	flag.StringVarP(&Args.outputFile, "output-file", "o", DefaultOutputFile, "the output file name")
+	flag.StringVarP(&Args.outputFile, "output-file", "o", "", "the output file name. If unspecified, or \"-\", print to stdout")
+	flag.StringVarP(&Args.outputFormat, "output-format", "f", DefaultOutputFormat, "the output file format, either \"json\" or \"dot\"")
 	flag.BoolVarP(&Args.v4, "force-ipv4", "4", false, "Force the use of the legacy IPv4 protocol")
 	flag.CommandLine.SortFlags = false
 }
@@ -121,7 +124,9 @@ func main() {
 	SetColourPurple := "\x1b[0;35m"
 	UnsetColour := "\x1b[0m"
 	if os.Geteuid() == 0 {
-		fmt.Fprintf(os.Stderr, "%sWARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative%s\n", SetColourPurple, UnsetColour)
+		if runtime.GOOS == "linux" {
+			fmt.Fprintf(os.Stderr, "%sWARNING: you are running this program as root. Consider setting the CAP_NET_RAW capability and running as non-root user as a more secure alternative%s\n", SetColourPurple, UnsetColour)
+		}
 	}
 
 	flag.Parse()
@@ -183,15 +188,31 @@ func main() {
 	if err != nil {
 		log.Fatalf("Traceroute() failed: %v", err)
 	}
-	output := results.ToJSON(true, "  ")
-	if Args.outputFile == "-" {
+	var (
+		output string
+	)
+	switch Args.outputFormat {
+	case "json":
+		output, err = results.ToJSON(true, "  ")
+	case "dot":
+		output, err = results.ToDOT()
+	default:
+		log.Fatalf("Unknown output format \"%s\"", Args.outputFormat)
+	}
+	if err != nil {
+		log.Fatalf("Failed to generate output in format \"%s\": %v", Args.outputFormat, err)
+	}
+	if Args.outputFile == "-" || Args.outputFile == "" {
 		fmt.Println(output)
 	} else {
 		err := os.WriteFile(Args.outputFile, []byte(output), 0644)
 		if err != nil {
-			log.Fatalf("WriteFile failed: %v", err)
+			log.Fatalf("Failed to write to file: %v", err)
 		}
-		log.Printf("Saved JSON file to %v", Args.outputFile)
-		log.Printf("You can convert it to DOT by running python3 -m dublintraceroute plot %v", Args.outputFile)
+		log.Printf("Saved results to to \"%s\"", Args.outputFile)
+		if Args.outputFormat == "json" {
+			log.Printf("You can convert it to DOT by running `todot \"%s\"", Args.outputFile)
+		}
+		log.Printf("You can convert the DOT file to PNG by running `dot -Tpng \"%s\" -o \"%s.png\"`", Args.outputFile, Args.outputFile)
 	}
 }
