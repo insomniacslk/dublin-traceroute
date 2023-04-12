@@ -111,8 +111,12 @@ func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
 		// this is not our packet
 		return false
 	}
-	if len(pr.payload) != len(p.Payload) {
+	if pr.InnerIPv6().PayloadLen != len(p.Payload)+inet.UDPHeaderLen {
 		// different payload length, not our packet
+		// NOTE: here I am using pr.InnerIPv6().PayloadLen instead of len(pr.payload)
+		// because the responding hop might use an RFC4884 multi-part ICMPv6 message,
+		// which has extra data at the end of time-exceeded and destination-unreachable
+		// messages
 		return false
 	}
 	return true
