@@ -211,8 +211,8 @@ func main() {
 		}
 		log.Printf("Saved results to to \"%s\"", Args.outputFile)
 		if Args.outputFormat == "json" {
-			log.Printf("You can convert it to DOT by running `todot \"%s\"", Args.outputFile)
+			log.Printf("You can convert it to DOT by running `todot \"%s\" -o \"%s.dot\"`", Args.outputFile, Args.outputFile)
 		}
-		log.Printf("You can convert the DOT file to PNG by running `dot -Tpng \"%s\" -o \"%s.png\"`", Args.outputFile, Args.outputFile)
+		log.Printf("You can convert the DOT file to PNG by running `dot -Tpng \"%s.dot\" -o \"%s.png\"`", Args.outputFile, Args.outputFile)
 	}
 }
