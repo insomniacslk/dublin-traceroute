@@ -72,7 +72,9 @@ target_include_directories(dublintraceroute PUBLIC ${JSONCPP_INCLUDE_DIRS} ${TIN
 if(APPLE)
     # with macOS Mojave /usr/local/{include,lib} have to be specified explicitly
     target_include_directories(dublintraceroute PUBLIC /usr/local/include)
-    target_link_libraries(dublintraceroute /usr/local/lib)
+    target_include_directories(dublintraceroute PUBLIC /opt/homebrew/include)
+    target_link_directories(dublintraceroute PUBLIC /usr/local/lib)
+    target_link_directories(dublintraceroute PUBLIC /opt/homebrew/lib)
 endif(APPLE)
 
 #set_property(TARGET dublintraceroute PROPERTY CXX_STANDARD 11)
