@@ -117,6 +117,7 @@ func (pr ProbeResponseUDPv6) Matches(pi probes.Probe) bool {
 		// because the responding hop might use an RFC4884 multi-part ICMPv6 message,
 		// which has extra data at the end of time-exceeded and destination-unreachable
 		// messages
+		// NOTE: p.Payload is the payload of IP
 		return false
 	}
 	return true
