@@ -162,9 +162,9 @@ jobs:
       - name: Login to Docker hub
         run: docker login -u $DOCKER_USER -p $DOCKER_PASS
       - name: Build docker image
-        run: docker-compose -f $COMPOSE_FILE build
+        run: docker compose -f $COMPOSE_FILE build
       - name: Run integ tests
-        run: docker-compose -f $COMPOSE_FILE up --abort-on-container-exit
+        run: docker compose -f $COMPOSE_FILE up --abort-on-container-exit
       - name: publish coverage data
         run: |
           bash <(curl -s https://codecov.io/bash) -c -f coverage_integ.txt -F integ

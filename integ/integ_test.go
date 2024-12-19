@@ -94,9 +94,14 @@ func runWithConfig(useGoImplementation bool, cfg testConfig) ([]byte, []byte, er
 	rCmd := exec.CommandContext(ctx, cl[0], cl[1:]...)
 	rCmd.Stdout, rCmd.Stderr = os.Stdout, os.Stderr
 	var routestTerminatedCorrectly int32
+	var routestPid = -1
 	defer func() {
-		if err := rCmd.Process.Kill(); err != nil {
-			log.Panicf("Failed to terminate routest process: %v", err)
+		if routestPid != -1 {
+			if err := rCmd.Process.Kill(); err != nil {
+				log.Panicf("Failed to terminate routest process: %v", err)
+			} else {
+				atomic.StoreInt32(&routestTerminatedCorrectly, 1)
+			}
 		} else {
 			atomic.StoreInt32(&routestTerminatedCorrectly, 1)
 		}
@@ -106,6 +111,7 @@ func runWithConfig(useGoImplementation bool, cfg testConfig) ([]byte, []byte, er
 		if err != nil && atomic.LoadInt32(&routestTerminatedCorrectly) != 1 {
 			log.Panicf("Error returned from command %+v: %v", rCmd, err)
 		}
+		routestPid = rCmd.Process.Pid
 	}()
 	// wait a second to give routest time to start
 	// TODO do something better than waiting

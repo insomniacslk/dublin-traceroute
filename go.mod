@@ -1,8 +1,6 @@
 module github.com/insomniacslk/dublin-traceroute
 
-go 1.21
-
-toolchain go1.21.5
+go 1.22
 
 require (
 	github.com/florianl/go-nfqueue v1.3.1
@@ -10,8 +8,8 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/net v0.20.0
-	golang.org/x/sys v0.16.0
+	golang.org/x/net v0.33.0
+	golang.org/x/sys v0.28.0
 )
 
 require (
