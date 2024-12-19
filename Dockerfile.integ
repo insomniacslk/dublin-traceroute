@@ -1,4 +1,4 @@
-FROM ubuntu:20.10
+FROM ubuntu:22.04
 
 LABEL BUILD="docker build -t insomniacslk/dublin-traceroute-integ -f Dockerfile.integ ."
 # --privileged required for nfqueue
@@ -24,10 +24,10 @@ RUN apt-get update &&                          \
 # install Go
 WORKDIR /tmp
 RUN set -exu; \
-    wget https://golang.org/dl/go1.15.6.linux-amd64.tar.gz ;\
-    tar -C / -xvzf go1.15.6.linux-amd64.tar.gz
+    wget https://golang.org/dl/go1.21.13.linux-amd64.tar.gz ;\
+    tar -C / -xvzf go1.21.13.linux-amd64.tar.gz
 ENV PATH="$PATH:/go/bin:/build/bin"
-ENV GOPATH=/go/path:/build
+ENV GOPATH=/go:/build
 
 ENV PROJDIR=/build/src/github.com/insomniacslk/dublin-traceroute
 RUN mkdir -p $PROJDIR
@@ -55,9 +55,6 @@ RUN set -exu ;\
     go get -v ./... ;\
     go build
 
-# run tests
-RUN set -exu ;\
-    go get -v -t github.com/stretchr/testify
-
 CMD set -exu ;\
+    cd $PROJDIR ;\
     timeout 60 go test -v -race -coverprofile=/build/coverage/profile.out -covermode=atomic github.com/insomniacslk/dublin-traceroute/integ
