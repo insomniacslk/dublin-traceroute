@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
+include(GoogleTest)
+enable_testing()
+
 # This file is shamelessly copied and modified from libtins.
 # Use dublintraceroute's include directories + test include directories
 INCLUDE_DIRECTORIES(
@@ -34,11 +37,15 @@ ADD_CUSTOM_TARGET(
 # Test executables
 
 ADD_EXECUTABLE(UDPv4Test EXCLUDE_FROM_ALL udpv4.cxx)
+gtest_discover_tests(UDPv4Test)
 ADD_EXECUTABLE(HopTest EXCLUDE_FROM_ALL hop.cxx)
+gtest_discover_tests(HopTest)
 ADD_EXECUTABLE(HopsTest EXCLUDE_FROM_ALL hops.cxx)
+gtest_discover_tests(HopsTest)
 
 # Tests
 
 ADD_TEST(UDPv4 UDPv4Test)
 ADD_TEST(Hop HopTest)
 ADD_TEST(Hops HopsTest)
+

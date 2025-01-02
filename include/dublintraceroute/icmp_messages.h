@@ -24,14 +24,14 @@
 typedef std::tuple<uint8_t, uint8_t> icmpmessage_t;
 
 
-struct icmpmessage_hash: public std::unary_function<icmpmessage_t, std::size_t> {
+struct icmpmessage_hash {
 	std::size_t operator()(const icmpmessage_t &key) const {
 		return std::get<0>(key) ^ std::get<1>(key);
 	}
 };
 
 
-struct icmpmessage_equals: public std::binary_function<icmpmessage_t, icmpmessage_t, bool> {
+struct icmpmessage_equals {
 	bool operator()(const icmpmessage_t &left, const icmpmessage_t &right) const {
 		return (
 			std::get<0>(left) == std::get<0>(right) &&
