@@ -247,10 +247,11 @@ make
 
 You need the latest XCode installed to build this project. Then run:
 ```bash
-brew install https://raw.githubusercontent.com/insomniacslk/dublin-traceroute/master/homebrew/dublin-traceroute.rb
+wget https://raw.githubusercontent.com/insomniacslk/dublin-traceroute/master/homebrew/dublin-traceroute.rb
+brew install ./dublin-traceroute.rb
 ```
 
-This will be as simple as `brew install dublin-traceroute` after https://github.com/Homebrew/homebrew/pull/50000 will be merged.
+Unfortunately `dublin-traceroute` is not part of Homebrew's base packages, see <https://github.com/Homebrew/homebrew/pull/50000>.
 
 Please [file an issue](https://github.com/insomniacslk/dublin-traceroute/issues/new/choose) with the necessary details if this doesn't work for you.
 

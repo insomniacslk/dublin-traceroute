@@ -127,7 +127,7 @@ jobs:
           cd build
           cmake ..
           make tests
-          make test
+          ctest
   integ:
     runs-on: ubuntu-latest
     strategy:
