@@ -1,11 +1,12 @@
 module github.com/insomniacslk/dublin-traceroute
 
-go 1.22
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
 	github.com/florianl/go-nfqueue v1.3.1
-	github.com/goccy/go-graphviz v0.1.2
+	github.com/goccy/go-graphviz v0.1.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
