@@ -327,7 +327,14 @@ func (d UDPv4) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			probe.Flowhash = flowhash
 			probe.IsLast = bytes.Equal(rpu.Header.Src.To4(), d.Target.To4()) || isPortUnreachable
 			probe.Name = rpu.Header.Src.String() // TODO compute this field
-			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
+			rtt := rpu.Timestamp.Sub(spu.Timestamp)
+			if rtt < 0 {
+				// On fast paths (e.g. the loopback used by the integration
+				// tests) the listener can timestamp the reply before the
+				// send time is recorded, which would underflow the uint64.
+				rtt = 0
+			}
+			probe.RttUsec = uint64(rtt) / 1000
 			probe.NATID = NATID
 			probe.ZeroTTLForwardingBug = (rpu.InnerIP().TTL == 0)
 			probe.Received = &results.Packet{
