@@ -43,9 +43,15 @@ Tins::IP* UDPv4Probe::forge() {
 
 	payload[5] = ((unsigned char *)&identifier)[0];
 	payload[6] = ((unsigned char *)&identifier)[1];
+	/* Build the RawPDU from an explicit [begin, end) range. Passing a bare
+	 * `char *` would select the std::string constructor, which reads up to
+	 * the first NUL byte: since the identifier bytes are usually non-zero,
+	 * there is no terminator and the construction reads past the end of the
+	 * `payload` buffer (stack buffer over-read).
+	 */
 	Tins::IP *packet = new Tins::IP(remote_addr_, local_addr_) /
 		Tins::UDP(remote_port_, local_port_) /
-		Tins::RawPDU((char *)payload);
+		Tins::RawPDU(payload, payload + sizeof(payload));
 	packet->ttl(ttl_);
 	packet->flags(Tins::IP::DONT_FRAGMENT);
 
