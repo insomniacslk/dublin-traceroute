@@ -1,6 +1,6 @@
 module github.com/insomniacslk/dublin-traceroute
 
-go 1.25.0
+go 1.26.3
 
 require (
 	github.com/florianl/go-nfqueue v1.3.1

@@ -50,7 +50,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go: ['1.21', '1.22']
+        go: ['1.26.3']
         os: ['ubuntu-latest', 'macos-latest'] # , 'windows-latest']
     steps:
       - uses: actions/checkout@v2
@@ -84,7 +84,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go: ['1.21', '1.22']
+        go: ['1.26.3']
         os: ['ubuntu-latest', 'macos-latest'] # , 'windows-latest']
     steps:
       - uses: actions/checkout@v2
@@ -99,7 +99,7 @@ jobs:
           echo "GOPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
       - if: matrix.os != 'windows-latest'
         run: |
-          cd src/github.com/${{ github.repository }}/go/dublintraceroute/cmd/dublin-traceroute
+          cd src/github.com/${{ github.repository }}/go/dublintraceroute
           go get -v -t ./...
           echo "" > coverage.txt
           for d in $(go list ./...); do
@@ -117,7 +117,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: "false"
-          go-version: "1.22"
+          go-version: "1.26.3"
       - name: Run Tests
         run: |
           sudo apt install libtins-dev libjsoncpp-dev libpcap-dev googletest
@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ['1.22']
+        go: ['1.26.3']
     env:
       DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKER_PASS: ${{ secrets.DOCKERHUB_PASSWORD }}

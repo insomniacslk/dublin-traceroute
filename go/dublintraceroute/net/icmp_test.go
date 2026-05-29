@@ -35,7 +35,7 @@ func TestICMPUnmarshalBinaryBinary(t *testing.T) {
 		0xde, 0xad, 0xc0, 0xde,
 	}
 	var i ICMP
-	err := i.UnmarshalBinaryBinary(b)
+	err := i.UnmarshalBinary(b)
 	require.NoError(t, err)
 	assert.Equal(t, ICMPTimeExceeded, i.Type)
 	assert.Equal(t, ICMPCode(0), i.Code)

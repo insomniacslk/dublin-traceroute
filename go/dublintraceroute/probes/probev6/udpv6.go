@@ -249,7 +249,7 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 	for _, sp := range sent {
 		spu := sp.(*ProbeUDPv6)
 		if err := spu.Validate(); err != nil {
-			log.Printf("Invalid probe: %w", err)
+			log.Printf("Invalid probe: %v", err)
 			continue
 		}
 		sentUDP := spu.UDP()

@@ -33,7 +33,10 @@ func TestIPv6MarshalBinary(t *testing.T) {
 		Src: 0xabcd,
 		Dst: 0xbcde,
 	}
-	iph.SetNext(&udp)
+	// UDP is not a Layer, so chain its serialized bytes as a Raw payload.
+	udpBytes, err := udp.MarshalBinary()
+	require.NoError(t, err)
+	iph.SetNext(&Raw{Data: udpBytes})
 	b, err := iph.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, want, b)
@@ -60,6 +63,7 @@ func TestIPv6UnmarshalBinary(t *testing.T) {
 	assert.Equal(t, ProtoUDP, ip.NextHeader)
 	assert.Equal(t, net.ParseIP("2001:db8:1::10"), ip.Src)
 	assert.Equal(t, net.ParseIP("2001:4860:4860::8888"), ip.Dst)
-	require.NotNil(t, ip.Next())
-	// TODO check UDP payload
+	// UDP payloads are not parsed into a sub-layer (UDP is not a Layer); the
+	// caller is expected to parse the payload separately with NewUDP.
+	require.Nil(t, ip.Next())
 }
