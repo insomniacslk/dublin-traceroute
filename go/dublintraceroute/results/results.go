@@ -4,6 +4,7 @@ package results
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -174,7 +175,11 @@ func (r *Results) ToDOT() (string, error) {
 		node  *cgraph.Node
 		probe *Probe
 	}
-	gv := graphviz.New()
+	ctx := context.Background()
+	gv, err := graphviz.New(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to create graphviz: %w", err)
+	}
 	graph, err := gv.Graph()
 	if err != nil {
 		return "", fmt.Errorf("failed to create graph: %w", err)
@@ -196,7 +201,7 @@ func (r *Results) ToDOT() (string, error) {
 		var nodes []node
 		// add first hop
 		firstNodeName := hops[0].Sent.IP.SrcIP.String()
-		firstHop, err := graph.CreateNode(firstNodeName)
+		firstHop, err := graph.CreateNodeByName(firstNodeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to create first node: %w", err)
 		}
@@ -224,7 +229,7 @@ func (r *Results) ToDOT() (string, error) {
 				}
 				label = fmt.Sprintf("%s%s\n%s\n%s", nodename, hostname, hop.Received.ICMP.Description, mpls)
 			}
-			n, err := graph.CreateNode(nodename)
+			n, err := graph.CreateNodeByName(nodename)
 			if err != nil {
 				return "", fmt.Errorf("failed to create node '%s': %w", nodename, err)
 			}
@@ -252,7 +257,15 @@ func (r *Results) ToDOT() (string, error) {
 			}
 			prev := nodes[idx-1]
 			cur := nodes[idx]
-			edgeName := fmt.Sprintf("%s - %s - %d - %d", prev.node.Name(), cur.node.Name(), idx, flowID)
+			prevName, err := prev.node.Name()
+			if err != nil {
+				return "", fmt.Errorf("failed to get node name: %w", err)
+			}
+			curName, err := cur.node.Name()
+			if err != nil {
+				return "", fmt.Errorf("failed to get node name: %w", err)
+			}
+			edgeName := fmt.Sprintf("%s - %s - %d - %d", prevName, curName, idx, flowID)
 			edgeLabel := ""
 			if idx == 1 {
 				edgeLabel += fmt.Sprintf(
@@ -266,7 +279,7 @@ func (r *Results) ToDOT() (string, error) {
 			}
 			edgeLabel += fmt.Sprintf("\n%d.%d ms", int(cur.probe.RttUsec/1000), int(cur.probe.RttUsec%1000))
 
-			edge, err := graph.CreateEdge(edgeName, prev.node, cur.node)
+			edge, err := graph.CreateEdgeByName(edgeName, prev.node, cur.node)
 			if err != nil {
 				return "", fmt.Errorf("failed to create edge '%s': %w", edgeName, err)
 			}
@@ -275,7 +288,7 @@ func (r *Results) ToDOT() (string, error) {
 		}
 	}
 	var buf bytes.Buffer
-	if err := gv.Render(graph, "dot", &buf); err != nil {
+	if err := gv.Render(ctx, graph, graphviz.Format("dot"), &buf); err != nil {
 		return "", fmt.Errorf("failed to render graph: %w", err)
 	}
 	if err := graph.Close(); err != nil {
