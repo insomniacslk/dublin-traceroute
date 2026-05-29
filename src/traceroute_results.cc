@@ -161,8 +161,11 @@ void TracerouteResults::show(std::ostream &stream) {
 							auto &payload = extension.payload();
 							if (ext_class == ICMP_EXTENSION_MPLS_CLASS && ext_type == ICMP_EXTENSION_MPLS_TYPE) {
 								// expecting size to be a multiple of 4 in valid MPLS label stacks
-								unsigned int num_labels = (extension.size() - 4) / 4;
-								for (unsigned int idx = 0; idx < payload.size() ; idx += 4) {
+								// each MPLS label stack entry is 4 bytes; require a
+								// full entry to be present before reading it, so a
+								// malformed (non-multiple-of-4) payload cannot
+								// cause an out-of-bounds read.
+								for (unsigned int idx = 0; idx + 4 <= payload.size(); idx += 4) {
 									unsigned int label = (payload[idx + 0] << 12) + (payload[idx + 1] << 4) + (payload[idx + 2] >> 4);
 									unsigned int experimental = (payload[idx + 2] & 0x0f) >> 1;
 									unsigned int bottom_of_stack = payload[idx + 2] & 0x01;
@@ -187,7 +190,6 @@ void TracerouteResults::show(std::ostream &stream) {
 				 * responding, the detected NAT could have been
 				 * started before
 				 */
-				auto inner_ip = hop.received()->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
 				stream << ", NAT ID: " << hop.nat_id();
 				if (hopnum > 1 && hop.nat_id() != prev_nat_id)
 					stream << " (NAT detected)";

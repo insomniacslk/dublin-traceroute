@@ -16,6 +16,7 @@
 #include <vector>
 #include <sstream>
 #include <chrono>
+#include <atomic>
 #include <functional>
 #include <unistd.h>
 #include <sys/types.h>
@@ -112,8 +113,12 @@ const void DublinTraceroute::validate_arguments() {
  * \returns an instance of TracerouteResults
  */
 std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
-	// avoid running multiple traceroutes
-	if (mutex_tracerouting.try_lock() == false)
+	// avoid running multiple traceroutes. Hold the lock via a unique_lock so it
+	// is released on every exit path, including when an exception is thrown
+	// (the previous manual unlock() was skipped on error, leaving the mutex
+	// locked and deadlocking the destructor).
+	std::unique_lock<std::mutex> tracerouting_lock(mutex_tracerouting, std::try_to_lock);
+	if (!tracerouting_lock.owns_lock())
 		throw DublinTracerouteInProgressException("Traceroute already in progress");
 
 	validate_arguments();
@@ -145,11 +150,15 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	int ts_flag = 1;
 	int ret;
 	if ((ret = setsockopt(sock, SOL_SOCKET, SO_TIMESTAMP, (int *)&ts_flag, sizeof(ts_flag))) == -1) {
+		close(sock);
 		throw std::runtime_error(strerror(errno));
 	}
+	// Flag used to ask the listener thread to stop early (set on the error
+	// path so we never destroy a still-running, joinable std::thread).
+	std::atomic<bool> stop_listener(false);
 	std::thread listener_thread(
 		[&]() {
-			size_t received;
+			ssize_t received;
 			char buf[512];
 			struct msghdr msg;
 			memset(&msg, 0, sizeof(msg));
@@ -158,10 +167,14 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 			iov[0].iov_len = sizeof(buf);
 			msg.msg_iov = iov;
 			msg.msg_iovlen = sizeof(iov) / sizeof(struct iovec);
-			struct csmghdr *cmsg;
-			msg.msg_control = cmsg;
-			msg.msg_controllen = 0;
-			while (std::chrono::steady_clock::now() <= deadline) {
+			// control buffer to receive the SO_TIMESTAMP ancillary data.
+			// This was previously an uninitialized pointer with a zero-length
+			// control buffer, which left msg_control pointing at garbage and
+			// prevented kernel timestamps from being delivered.
+			char cmsgbuf[CMSG_SPACE(sizeof(struct timeval))];
+			msg.msg_control = cmsgbuf;
+			msg.msg_controllen = sizeof(cmsgbuf);
+			while (!stop_listener && std::chrono::steady_clock::now() <= deadline) {
 				received = recvmsg(sock, &msg, MSG_DONTWAIT);
 				if (received == -1) {
 					if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -193,6 +206,20 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 			close(sock);
 		}
 	);
+
+	// Ensure the listener thread is always stopped and joined before this
+	// function returns, including when sending the probes throws. Destroying a
+	// joinable std::thread calls std::terminate(), which previously aborted the
+	// whole process on any probe send/setup failure (e.g. no route to host).
+	struct ListenerGuard {
+		std::thread &thread;
+		std::atomic<bool> &stop;
+		~ListenerGuard() {
+			stop = true;
+			if (thread.joinable())
+				thread.join();
+		}
+	} listener_guard{listener_thread, stop_listener};
 
 	std::shared_ptr<flow_map_t> flows(new flow_map_t);
 
@@ -263,8 +290,6 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 	if (!no_dns()) {
 		match_hostnames(*results, flows);
 	}
-
-	mutex_tracerouting.unlock();
 
 	return std::make_shared<TracerouteResults>(*results);
 }
