@@ -312,7 +312,14 @@ func (d UDPv6) Match(sent []probes.Probe, received []probes.ProbeResponse) resul
 			// TODO check if To16() is the right thing to do here
 			probe.IsLast = bytes.Equal(rpu.Addr.To16(), d.Target.To16())
 			probe.Name = rpu.Addr.String()
-			probe.RttUsec = uint64(rpu.Timestamp.Sub(spu.Timestamp)) / 1000
+			rtt := rpu.Timestamp.Sub(spu.Timestamp)
+			if rtt < 0 {
+				// On fast paths (e.g. the loopback used by the integration
+				// tests) the listener can timestamp the reply before the
+				// send time is recorded, which would underflow the uint64.
+				rtt = 0
+			}
+			probe.RttUsec = uint64(rtt) / 1000
 			probe.ZeroTTLForwardingBug = (rpu.InnerIPv6().HopLimit == 0)
 			probe.Received = &results.Packet{
 				Timestamp: results.UnixUsec(rpu.Timestamp),
