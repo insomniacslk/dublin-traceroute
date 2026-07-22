@@ -386,4 +386,4 @@ The [2-clause BSD](http://opensource.org/licenses/BSD-2-Clause)
 #### Who are you?
 
 My name is Andrea Barberio, you can find more about me at
-https://insomniac.slackware.it and <a rel="me" href="https://mastodon.online/@insomniacslk">on Mastodon</a>.
+<https://insomniac.slackware.it> and <a rel="me" href="https://mastodon.online/@insomniac">on Mastodon</a>.
