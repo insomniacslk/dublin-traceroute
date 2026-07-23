@@ -7,7 +7,11 @@ IF(APPLE)
     # macOS Mojave is not using /usr/include anymore, see https://github.com/neovim/neovim/issues/9050
     if(NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET} AND NOT DEFINED ENV{SDKROOT})
         set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-        set(CMAKE_OSX_DEPLOYMENT_TARGET ${CMAKE_SYSTEM_VERSION})
+        # Don't set CMAKE_OSX_DEPLOYMENT_TARGET from CMAKE_SYSTEM_VERSION: on
+        # Apple that variable is the Darwin kernel version (e.g. 25.4.0 on
+        # macOS 26), not the macOS product version, so it produces an invalid
+        # -mmacosx-version-min. Leaving it unset lets the toolchain pick the
+        # SDK default, which targets the running OS.
     ENDIF()
     # assume built-in pthreads on MacOS
     set(CMAKE_HAVE_THREADS_LIBRARY 1)
