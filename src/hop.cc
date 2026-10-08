@@ -89,11 +89,14 @@ uint16_t Hop::nat_id() {
 			"Cannot get NAT ID for unmatched packets"
 		);
 	}
-	// FIXME catch pdu_not_found
-	uint16_t chk1 = sent_->rfind_pdu<Tins::UDP>().checksum();
-	Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
-	uint16_t chk2 = inner_ip.rfind_pdu<Tins::UDP>().checksum();
-	return chk2 - chk1;
+	try {
+		uint16_t chk1 = sent_->rfind_pdu<Tins::UDP>().checksum();
+		Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
+		uint16_t chk2 = inner_ip.rfind_pdu<Tins::UDP>().checksum();
+		return chk2 - chk1;
+	} catch (Tins::pdu_not_found&) {
+		throw DublinTracerouteException("Cannot extract NAT ID: missing PDU layer");
+	}
 }
 
 
@@ -111,14 +114,15 @@ const bool Hop::zerottl_forwarding_bug() {
 			"Cannot get zero-TTL forwarding information for unmatched packets"
 		);
 	}
-	// FIXME catch pdu_not_found
-	uint16_t chk1 = sent_->rfind_pdu<Tins::UDP>().checksum();
-	Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
-	if (inner_ip.ttl() == 0) {
-		// TODO handle the interesting case where TTL is neither 0 or 1
-		return true;
+	try {
+		Tins::IP inner_ip = received_->rfind_pdu<Tins::RawPDU>().to<Tins::IP>();
+		if (inner_ip.ttl() == 0) {
+			return true;
+		}
+		return false;
+	} catch (Tins::pdu_not_found&) {
+		throw DublinTracerouteException("Cannot extract zero-TTL forwarding bug: missing PDU layer");
 	}
-	return false;
 }
 
 /** \brief return the RTT in microseconds
