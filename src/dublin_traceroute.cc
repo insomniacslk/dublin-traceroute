@@ -249,13 +249,12 @@ std::shared_ptr<TracerouteResults> DublinTraceroute::traceroute() {
 		 	 * checksum. The UDP checksum is used to identify the flow.
 		 	 */
 			
-			UDPv4Probe *probe = NULL;
+			std::unique_ptr<UDPv4Probe> probe;
 			if(use_srcport_for_path_generation()){
-				probe = new UDPv4Probe(target(), dstport(), iterated_port, ttl);
+				probe = std::make_unique<UDPv4Probe>(target(), dstport(), iterated_port, ttl);
 			}
 			else{
-				probe = new UDPv4Probe(target(), iterated_port, srcport(), ttl);
-				//UDPv4Probe probe(target(), dport, srcport(), ttl);	
+				probe = std::make_unique<UDPv4Probe>(target(), iterated_port, srcport(), ttl);
 			}
 			Tins::IP *packet;
 			try {
